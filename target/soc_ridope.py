@@ -45,57 +45,43 @@ _io = [
 
 ]
 
-class SimplePeriph(Module):
-    def __init__(self, pads, init=None):
-        num_of_regs = 2
-        mem = Memory(32, num_of_regs, init=init)
-        port = mem.get_port()
-        self.specials += mem, port
-
-        # Wishone Memory.
-        self.submodules.wb_mem = wishbone.SRAM(
-            mem_or_size = mem,
-            read_only   = False,
-            bus         = wishbone.Interface(data_width=32)
+class FomuRGB(Module, AutoCSR):
+    def __init__(self, pads):
+        self.output = CSRStorage(3)
+        self.specials += Instance("SB_RGBA_DRV",
+            i_CURREN = 0b1,
+            i_RGBLEDEN = 0b1,
+            i_RGB0PWM = self.output.storage[0],
+            i_RGB1PWM = self.output.storage[1],
+            i_RGB2PWM = self.output.storage[2],
+            o_RGB0 = pads.r,
+            o_RGB1 = pads.g,
+            o_RGB2 = pads.b,
+            p_CURRENT_MODE = "0b1",
+            p_RGB0_CURRENT = "0b000011",
+            p_RGB1_CURRENT = "0b000011",
+            p_RGB2_CURRENT = "0b000011",
         )
 
-        self.bus = self.wb_mem.bus
+
+class SimplePeriph(Module, AutoCSR):
+    def __init__(self, pads):
+        num_of_regs = 2
+
+        self.input = CSRStorage(32)
+        self.output = CSRStatus(16)
 
         # Internal Signals.
         reg_addr  = Signal(max=num_of_regs)
 
         # Main FSM.
-        self.submodules.fsm = fsm = FSM(reset_state="RST")
+        self.sync +=  [
+            pads.eq(self.input.storage[0:2]),
+            self.output.status.eq(self.input.storage[0:2])
+        ]
 
-        fsm.act("RST",
-            NextValue(reg_addr, 0),
-            NextState("IDLE")
-        )
 
-        self.comb += port.adr.eq(reg_addr)
-         
-        fsm.act("IDLE",
-            NextState("REG-WRITE")
-        )
-        
-        fsm.act("REG-WRITE",
-            If(port.dat_r[0] == 1, 
-                NextValue(pads, pads | 1 << reg_addr)
-            ).Elif(port.dat_r[0] == 0,
-                NextValue(pads, pads & ~(1 << reg_addr))
-            ),
-            
-            NextState("ADDR-SHIFT")
-        )
 
-        fsm.act("ADDR-SHIFT",
-            If(reg_addr == (num_of_regs - 1),
-                NextState("RST")
-            ).Else(
-                NextValue(reg_addr, reg_addr + 1),
-                NextState("IDLE")
-            )
-        )
 
 class _CRG(Module): # Clock Region definition
     def __init__(self, platform, sys_clk_freq):
@@ -147,10 +133,6 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         #self.submodules += btn0_press
 
         self.submodules.speriph = SimplePeriph(led)
-        self.bus.add_slave(name="speriph", slave=self.speriph.bus, region=SoCRegion(
-             origin = 0x50000000,
-             size   = 32*2,
-         ))
         self.add_csr("speriph")
 
         

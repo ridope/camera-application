@@ -73,6 +73,8 @@ static void help(void)
 	puts("Available commands:");
 	puts("help               - Show this command");
 	puts("reboot             - Reboot CPU");
+	puts("set-pins           - Turn on a led");
+	puts("reset-pins         - Turn off a led");
 }
 
 static void set_pin(void){
@@ -96,7 +98,11 @@ static void set_pin(void){
 		pin = 1;
 	}
 
-	*((uint32_t *) SPERIPH_BASE + 0x8) = 0xFFFF;
+	uint16_t actual = SPERIPH_DRIVER->leds;
+
+	SPERIPH_DRIVER->leds = actual | 1 << pin;
+
+	printf("written: %d \n", SPERIPH_DRIVER->status);
 }
 
 static void reset_pin(void)
@@ -121,7 +127,11 @@ static void reset_pin(void)
 		pin = 1;
 	}
 
-	*((uint32_t *) SPERIPH_BASE + 0x8) = 0;
+	uint16_t actual = SPERIPH_DRIVER->leds;
+
+	SPERIPH_DRIVER->leds = actual & ~(1 << pin);
+
+	printf("written: %d \n", SPERIPH_DRIVER->status);
 }
 
 /*-----------------------------------------------------------------------*/

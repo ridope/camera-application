@@ -64,21 +64,63 @@ class FomuRGB(Module, AutoCSR):
         )
 
 
-class SimplePeriph(Module, AutoCSR):
-    def __init__(self, pads):
-        num_of_regs = 2
+""" class Camera(Module, AutoCSR):
+    def __init__(self, platform, sdram_pads, sdram_clock_pad, vga_pads, sensor_pads, counter_hex, sw_pads, led_pads, btn_pads, sys_clk):
+        n_regs = 2
+        regs_size = 16 # bits
 
-        self.input = CSRStorage(32)
-        self.output = CSRStatus(16)
+        img_size = 640*480 #pixels
 
-        # Internal Signals.
-        reg_addr  = Signal(max=num_of_regs)
+        self.input = CSRStorage(n_regs*regs_size)
+        self.output = CSRStatus(img_size*regs_size)
 
-        # Main FSM.
-        self.sync +=  [
-            pads.eq(self.input.storage[0:2]),
-            self.output.status.eq(self.input.storage[0:2])
-        ]
+        self.specials += Instance("Camera",
+            i_MAX10_CLK1_50 = sys_clk,
+            i_MAX10_CLK2_50 = sys_clk,
+            o_DRAM_ADDR    = sdram_pads.a,
+            o_DRAM_BA = sdram_pads.ba,
+            o_DRAM_CAS_N = sdram_pads.cas_n,
+            o_DRAM_CKE = sdram_pads.cke,
+            o_DRAM_CLK = sdram_clock_pad,
+            o_DRAM_CS_N = sdram_pads.cs_n,
+            io_DRAM_DQ = sdram_pads.dq,
+            o_DRAM_LDQM = sdram_pads.dm,
+            o_DRAM_RAS_N = sdram_pads.ras_n,
+            o_DRAM_UDQM = sdram_pads.dm,
+            o_DRAM_WE_N = sdram_pads.cs_n,
+            o_HEX0 = counter_hex.seven_seg[0],
+            o_HEX1 = counter_hex.seven_seg[1],
+            o_HEX2 = counter_hex.seven_seg[2],
+            o_HEX3 = counter_hex.seven_seg[3],
+            o_HEX4 = counter_hex.seven_seg[4],
+            o_HEX5 = counter_hex.seven_seg[5],
+            i_KEY = btn_pads,
+            o_LEDR = led_pads,
+            i_SW = sw_pads,
+            o_VGA_B = vga_pads.b,
+            o_VGA_G = vga_pads.g,
+            o_VGA_HS = vga_pads.hsync_n,
+            o_VGA_R = vga_pads.r,
+            o_VGA_VS = vga_pads.vsync_n
+            i_D5M_D = sensor_pads.d,
+            i_D5M_FVAL = sensor_pads.fval,
+            i_D5M_LVAL = sensor_pads.lval,
+            i_D5M_PIXLCLK = sensor_pads.pixclk,
+            o_D5M_RESET_N = sensor_pads.rstn,
+            o_D5M_SCLK = sensor_pads.sclk,
+            i_D5M_SDATA = sensor_pads.sdata,
+            i_D5M_STROBE = sensor_pads.strobe,
+            o_D5M_TRIGGER = sensor_pads.trigger,
+            o_D5M_XCLKIN = sensor_pads.xclkin,
+
+        )
+
+        platform.add_source_dir(path="../Camera/")
+        platform.add_source_dir(path="../Camera/v/")
+        platform.add_source_dir(path="../Camera/v/vga")
+        platform.add_source_dir(path="../Camera/v/7SEG/")
+        platform.add_source_dir(path="../Camera/v/Sdram_Control/")
+        platform.add_source_dir(path="../Camera/v/TRDB-DM_Control/") """
 
 
 
@@ -87,6 +129,7 @@ class _CRG(Module): # Clock Region definition
     def __init__(self, platform, sys_clk_freq):
         self.rst = Signal()
         self.clock_domains.cd_sys = ClockDomain()
+        self.clock_domains.cd_vga    = ClockDomain()
 
         clk50 = platform.request("clk50")
 
@@ -95,6 +138,7 @@ class _CRG(Module): # Clock Region definition
         self.comb += pll.reset.eq(self.rst)
         pll.register_clkin(clk50, 50e6)
         pll.create_clkout(self.cd_sys, sys_clk_freq)
+        pll.create_clkout(self.cd_vga,  sys_clk_freq/2)
 
 class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
     def __init__(self, sys_clk_freq=int(50e6), with_video_terminal=False, **kwargs):
@@ -128,12 +172,33 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         seg =  platform.request("seven_seg")
         self.submodules.seven = LedChaser(seg, sys_clk_freq)
 
+        vga_pads = platform.request("vga")
+
+        btn_user = platform.request_all("user_btn")
+
+        vga_clk = ClockSignal("vga")
+
+        self.specials += Instance("vga_controller",
+            i_iRST_n = btn_user[0],
+            i_iVGA_CLK = vga_clk,
+            o_oHS = vga_pads.hsync_n,
+            o_oVS = vga_pads.vsync_n, 
+            o_oVGA_B = vga_pads.b,
+            o_oVGA_G = vga_pads.g,
+            o_oVGA_R = vga_pads.r
+            )
+
+
+
+        platform.add_source_dir(path="../VGA_Pattern/")
+        platform.add_source_dir(path="../VGA_Pattern/v/")
+
         #Reset
         #btn0_press = UserButtonPress(platform.request("user_btn"))
         #self.submodules += btn0_press
 
-        self.submodules.speriph = SimplePeriph(led)
-        self.add_csr("speriph")
+        #self.submodules.camera = Camera(led)
+        #self.add_csr("speriph")
 
         
         

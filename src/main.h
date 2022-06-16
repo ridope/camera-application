@@ -11,5 +11,7 @@
 #include <libbase/console.h>
 #include <generated/csr.h>
 
+#include <generated/mem.h>
+
 
 #endif

@@ -26,6 +26,9 @@ from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder import *
 from litex.build.generic_platform import *
 
+from litex.soc.interconnect.csr import *
+from litex.soc.interconnect import wishbone
+
 _io = [
 
     # Leds
@@ -41,6 +44,58 @@ _io = [
     ("user_led", 9, Pins("B11"), IOStandard("3.3-V LVTTL"))
 
 ]
+
+class SimplePeriph(Module):
+    def __init__(self, pads, init=None):
+        num_of_regs = 2
+        mem = Memory(32, num_of_regs, init=init)
+        port = mem.get_port()
+        self.specials += mem, port
+
+        # Wishone Memory.
+        self.submodules.wb_mem = wishbone.SRAM(
+            mem_or_size = mem,
+            read_only   = False,
+            bus         = wishbone.Interface(data_width=32)
+        )
+
+        self.bus = self.wb_mem.bus
+
+        # Internal Signals.
+        reg_addr  = Signal(max=num_of_regs)
+
+        # Main FSM.
+        self.submodules.fsm = fsm = FSM(reset_state="RST")
+
+        fsm.act("RST",
+            NextValue(reg_addr, 0),
+            NextState("IDLE")
+        )
+
+        self.comb += port.adr.eq(reg_addr)
+         
+        fsm.act("IDLE",
+            NextState("REG-WRITE")
+        )
+        
+        fsm.act("REG-WRITE",
+            If(port.dat_r[0] == 1, 
+                NextValue(pads, pads | 1 << reg_addr)
+            ).Elif(port.dat_r[0] == 0,
+                NextValue(pads, pads & ~(1 << reg_addr))
+            ),
+            
+            NextState("ADDR-SHIFT")
+        )
+
+        fsm.act("ADDR-SHIFT",
+            If(reg_addr == (num_of_regs - 1),
+                NextState("RST")
+            ).Else(
+                NextValue(reg_addr, reg_addr + 1),
+                NextState("IDLE")
+            )
+        )
 
 class _CRG(Module): # Clock Region definition
     def __init__(self, platform, sys_clk_freq):
@@ -74,8 +129,9 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         
         # Led ------------------------------------------------------------------------------------
         led = platform.request_all("user_led")
-        self.submodules.leds = LedChaser(led, sys_clk_freq)
-        self.add_csr("leds")
+        #self.submodules.leds = LedChaser(led, sys_clk_freq)
+        #self.add_csr("leds")
+
 
         # GPIOs ------------------------------------------------------------------------------------
         gpio = platform.request_all("gpio_0")
@@ -89,6 +145,15 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         #Reset
         #btn0_press = UserButtonPress(platform.request("user_btn"))
         #self.submodules += btn0_press
+
+        self.submodules.speriph = SimplePeriph(led)
+        self.bus.add_slave(name="speriph", slave=self.speriph.bus, region=SoCRegion(
+             origin = 0x50000000,
+             size   = 32*2,
+         ))
+        self.add_csr("speriph")
+
+        
         
 
 

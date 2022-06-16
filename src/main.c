@@ -75,6 +75,55 @@ static void help(void)
 	puts("reboot             - Reboot CPU");
 }
 
+static void set_pin(void){
+	char *str;
+	char *char_pin;
+	uint8_t pin = 0;
+
+	printf("\e[92;1mSelect the pin [0-1]\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	char_pin = get_token(&str);
+
+	if(strcmp(char_pin, "0") == 0)
+	{
+		pin = 0;
+	}else if(strcmp(char_pin, "1") == 0)
+	{
+		pin = 1;
+	}
+
+	*((uint32_t *) SPERIPH_BASE + 0x8) = 0xFFFF;
+}
+
+static void reset_pin(void)
+{
+	char *str;
+	char *char_pin;
+	uint8_t pin = 0;
+
+	printf("\e[92;1mSelect the pin [0-1]\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	char_pin = get_token(&str);
+
+	if(strcmp(char_pin, "0") == 0)
+	{
+		pin = 0;
+	}else if(strcmp(char_pin, "1") == 0)
+	{
+		pin = 1;
+	}
+
+	*((uint32_t *) SPERIPH_BASE + 0x8) = 0;
+}
+
 /*-----------------------------------------------------------------------*/
 /* Commands                                                              */
 /*-----------------------------------------------------------------------*/
@@ -100,6 +149,10 @@ static void console_service(void)
 		help();
 	else if(strcmp(token, "reboot") == 0)
 		reboot_cmd();
+	else if(strcmp(token, "set-pins") == 0)
+		set_pin();
+	else if(strcmp(token, "reset-pins") == 0)
+		reset_pin();
 
 
 	prompt();

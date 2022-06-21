@@ -98,11 +98,11 @@ static void set_pin(void){
 		pin = 1;
 	}
 
-	uint16_t actual = SPERIPH_DRIVER->leds;
+	// uint16_t actual = SPERIPH_DRIVER->leds;
 
-	SPERIPH_DRIVER->leds = actual | 1 << pin;
+	// SPERIPH_DRIVER->leds = actual | 1 << pin;
 
-	printf("written: %d \n", SPERIPH_DRIVER->status);
+	// printf("written: %d \n", SPERIPH_DRIVER->status);
 }
 
 static void reset_pin(void)
@@ -127,11 +127,11 @@ static void reset_pin(void)
 		pin = 1;
 	}
 
-	uint16_t actual = SPERIPH_DRIVER->leds;
+	// uint16_t actual = SPERIPH_DRIVER->leds;
 
-	SPERIPH_DRIVER->leds = actual & ~(1 << pin);
+	// SPERIPH_DRIVER->leds = actual & ~(1 << pin);
 
-	printf("written: %d \n", SPERIPH_DRIVER->status);
+	// printf("written: %d \n", SPERIPH_DRIVER->status);
 }
 
 /*-----------------------------------------------------------------------*/

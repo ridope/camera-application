@@ -14,11 +14,11 @@
 #include <generated/mem.h>
 
 typedef struct  {
-    uint16_t trigger;
-    uint16_t leds;
+    uint32_t reset;
+    uint32_t trigger;
     uint16_t status;
 } SPERIPH_TypeDef;
 
-#define SPERIPH_DRIVER      ((SPERIPH_TypeDef *)        CSR_SPERIPH_BASE)
+#define SPERIPH_DRIVER      ((SPERIPH_TypeDef *)        CSR_CAMERA_BASE)
 
 #endif

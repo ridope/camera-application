@@ -6,7 +6,6 @@
 module DE10_LITE_VGA_Pattern(
 
 	//////////// CLOCK //////////
-	input 		          		ADC_CLK_10,
 	input 		          		MAX10_CLK1_50,
 	input 		          		MAX10_CLK2_50,
 
@@ -46,17 +45,6 @@ module DE10_LITE_VGA_Pattern(
 	output		          		VGA_HS,
 	output		     [3:0]		VGA_R,
 	output		          		VGA_VS,
-
-	//////////// Accelerometer //////////
-	output		          		GSENSOR_CS_N,
-	input 		     [2:1]		GSENSOR_INT,
-	output		          		GSENSOR_SCLK,
-	inout 		          		GSENSOR_SDI,
-	inout 		          		GSENSOR_SDO,
-
-	//////////// Arduino //////////
-	inout 		    [15:0]		ARDUINO_IO,
-	inout 		          		ARDUINO_RESET_N
 );
 
 

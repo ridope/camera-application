@@ -14,8 +14,8 @@
 #include <generated/mem.h>
 
 typedef struct  {
-    uint32_t reset;
     uint32_t trigger;
+    uint32_t reset;
     uint16_t status;
 } SPERIPH_TypeDef;
 

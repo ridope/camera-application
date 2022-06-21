@@ -73,65 +73,17 @@ static void help(void)
 	puts("Available commands:");
 	puts("help               - Show this command");
 	puts("reboot             - Reboot CPU");
-	puts("set-pins           - Turn on a led");
-	puts("reset-pins         - Turn off a led");
+	puts("trigger           - Takes a picture");
+	puts("reset		        - Reset the camera");
 }
 
-static void set_pin(void){
-	char *str;
-	char *char_pin;
-	uint8_t pin = 0;
-
-	printf("\e[92;1mSelect the pin [0-1]\e[0m> ");
-	do 
-	{
-		str = readstr();
-	}while(str == NULL);
-
-	char_pin = get_token(&str);
-
-	if(strcmp(char_pin, "0") == 0)
-	{
-		pin = 0;
-	}else if(strcmp(char_pin, "1") == 0)
-	{
-		pin = 1;
-	}
-
-	// uint16_t actual = SPERIPH_DRIVER->leds;
-
-	// SPERIPH_DRIVER->leds = actual | 1 << pin;
-
-	// printf("written: %d \n", SPERIPH_DRIVER->status);
+static void trigger_camera(void){
+	camera_input_trigger_write(1);
 }
 
-static void reset_pin(void)
+static void reset_camera(void)
 {
-	char *str;
-	char *char_pin;
-	uint8_t pin = 0;
-
-	printf("\e[92;1mSelect the pin [0-1]\e[0m> ");
-	do 
-	{
-		str = readstr();
-	}while(str == NULL);
-
-	char_pin = get_token(&str);
-
-	if(strcmp(char_pin, "0") == 0)
-	{
-		pin = 0;
-	}else if(strcmp(char_pin, "1") == 0)
-	{
-		pin = 1;
-	}
-
-	// uint16_t actual = SPERIPH_DRIVER->leds;
-
-	// SPERIPH_DRIVER->leds = actual & ~(1 << pin);
-
-	// printf("written: %d \n", SPERIPH_DRIVER->status);
+	camera_input_trigger_write(0);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -159,10 +111,10 @@ static void console_service(void)
 		help();
 	else if(strcmp(token, "reboot") == 0)
 		reboot_cmd();
-	else if(strcmp(token, "set-pins") == 0)
-		set_pin();
-	else if(strcmp(token, "reset-pins") == 0)
-		reset_pin();
+	else if(strcmp(token, "trigger") == 0)
+		trigger_camera();
+	else if(strcmp(token, "reset") == 0)
+		reset_camera();
 
 
 	prompt();

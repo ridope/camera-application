@@ -6,7 +6,6 @@
 # Modified 2022 by lesteves <lesteves@insa-rennes.fr>
 # SPDX-License-Identifier: BSD-2-Clause
 
-from curses.ascii import SI
 import os
 import argparse
 from litex.build import io
@@ -30,6 +29,8 @@ from litex.build.generic_platform import *
 from litex.soc.interconnect.csr import *
 from litex.soc.interconnect import wishbone
 
+from migen.genlib.cdc import BlindTransfer
+
 
 class Camera(Module, AutoCSR):
     def __init__(self, platform):
@@ -39,8 +40,8 @@ class Camera(Module, AutoCSR):
         img_size = 640*480 #pixels
 
         self.input = CSRStorage(n_regs*regs_size, fields=[
-            CSRField("Trigger",  size=32, description="Triggers the sensor to start/stop the capture.", pulse=True),
-            CSRField("Reset", size=32, description="Resets the sensor.", pulse=True),
+            CSRField("Trigger",  size=1, description="Triggers the sensor to start/stop the capture.", pulse=True),
+            CSRField("Reset", size=1, description="Resets the sensor.", reset=1, pulse=True),
         ])
         self.output = CSRStatus(16, fields=[
             CSRField("Image",  size=16, description="The image captured by the sensor."),
@@ -64,7 +65,7 @@ class Camera(Module, AutoCSR):
         vga_ctrl_clk = Signal()
 
         self.clock_domains.cd_pixclk = ClockDomain()
-
+  
         sys_clk = ClockSignal("sys")
         vga_clk = ClockSignal("vga")
         d5m_pixclk = ClockSignal("pixclk")
@@ -80,6 +81,10 @@ class Camera(Module, AutoCSR):
         x_cont = Signal(12)
         y_cont = Signal(12)
         frame_count = Signal(32)
+        trigger_start = Signal()
+        capture_cmd = Signal()
+        capture_cmd_n = Signal()
+        trigger_end = Signal()
 
         rccd_data = Signal(12)
         rccd_lval = Signal()
@@ -88,7 +93,7 @@ class Camera(Module, AutoCSR):
         sccd_g = Signal(12)
         sccd_b = Signal(12)
         sccd_dval = Signal()
-
+        
         dly_rst_0 = Signal()
         dly_rst_1 = Signal()
         dly_rst_2 = Signal()
@@ -99,7 +104,8 @@ class Camera(Module, AutoCSR):
         vga_g = Signal(4)
         vga_b = Signal(4)
 
-        auto_start = Signal()      
+        auto_start = Signal() 
+
         
         #=======================================================
         #  Structural coding
@@ -116,6 +122,15 @@ class Camera(Module, AutoCSR):
         self.comb += self.cd_pixclk.clk.eq(sensor_pads.pixclk)
         self.comb += sensor_pads.xclkin.eq(d5m_clkin)
         self.comb += sdram_clock_pad.eq(sdram_clk_ps)
+
+         
+        self.submodules.trigstart = BlindTransfer("sys", "pixclk")
+        self.comb += [self.trigstart.i.eq(self.input.fields.Trigger), trigger_start.eq(self.trigstart.o)]
+
+        self.comb += [
+            capture_cmd.eq(~(trigger_end | capture_cmd_n)),
+            capture_cmd_n.eq(~(trigger_start | capture_cmd)),
+            ]
 
         #D5M read 
         self.sync.pixclk += [
@@ -175,12 +190,13 @@ class Camera(Module, AutoCSR):
             o_oDVAL = mccd_dval,
             o_oX_Cont = x_cont,
             o_oY_Cont = y_cont,
+            o_oDone = trigger_end,
             o_oFrame_Cont = frame_count,
             i_iDATA = rccd_data,
             i_iFVAL = rccd_fval,
             i_iLVAL = rccd_lval,
             i_iSTART = ~sw_pads[1]|auto_start,
-            i_iEND = self.input.fields.Trigger,
+            i_iEND = capture_cmd_n,
             i_iCLK = ~d5m_pixclk,
             i_iRST = dly_rst_2
         )

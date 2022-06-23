@@ -266,7 +266,7 @@ class Camera(Module, AutoCSR):
         platform.add_source_dir(path="../Camera/v/TRDB-DM_Control/")
 
         platform.toolchain.additional_sdc_commands = [
-            "create_generated_clock -name sdram_clk -source [get_pins {ALTPLL|auto_generated|clk[2]~clkctrl|outclk}] [get_ports {sdram_clock}]",
+            "create_generated_clock -name sdram_clk -source [get_pins {ALTPLL|auto_generated|pll1|clk[2]}] [get_ports {sdram_clock}]",
             "derive_pll_clocks",
             "derive_clock_uncertainty",
             "set_input_delay -max -clock sdram_clk 5.9 [get_ports sdram_dq*]",

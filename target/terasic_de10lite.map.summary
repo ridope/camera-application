@@ -1,12 +1,16 @@
-Analysis & Synthesis Status : Failed - Tue May 24 14:49:34 2022
+Analysis & Synthesis Status : Failed - Fri Jul  1 13:15:35 2022
 Quartus Prime Version : 21.1.0 Build 842 10/21/2021 SJ Lite Edition
 Revision Name : terasic_de10lite
 Top-level Entity Name : terasic_de10lite
-Family : Cyclone V
-Logic utilization (in ALMs) : N/A until Partition Merge
+Family : MAX 10
+Total logic elements : N/A until Partition Merge
+    Total combinational functions : N/A until Partition Merge
+    Dedicated logic registers : N/A until Partition Merge
 Total registers : N/A until Partition Merge
 Total pins : N/A until Partition Merge
 Total virtual pins : N/A until Partition Merge
-Total block memory bits : N/A until Partition Merge
+Total memory bits : N/A until Partition Merge
+Embedded Multiplier 9-bit elements : N/A until Partition Merge
 Total PLLs : N/A until Partition Merge
-Total DLLs : N/A until Partition Merge
+UFM blocks : N/A until Partition Merge
+ADC blocks : N/A until Partition Merge

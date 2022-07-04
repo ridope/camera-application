@@ -42,9 +42,11 @@
 module I2C_CCD_Config (	//	Host Side
 						iCLK,
 						iRST_N,
+						iEXPOSURE,
 						iZOOM_MODE_SW,
 						iEXPOSURE_ADJ,
 						iEXPOSURE_DEC_p,
+						iEnable,
 						//	I2C Side
 						I2C_SCLK,
 						I2C_SDAT
@@ -53,6 +55,7 @@ module I2C_CCD_Config (	//	Host Side
 //	Host Side
 input			iCLK;
 input			iRST_N;
+input 		iEnable;
 input 			iZOOM_MODE_SW;
 
 //	I2C Side
@@ -72,11 +75,11 @@ reg	[3:0]	mSetup_ST;
 
 
 //////////////   CMOS sensor registers setting //////////////////////
-
+input [15:0]	iEXPOSURE;
 input 		iEXPOSURE_ADJ;
 input		iEXPOSURE_DEC_p;	
 
-parameter 	default_exposure 			= 16'h07c0;
+parameter 	default_exposure 			= 16'h03DC;
 parameter 	exposure_change_value	 	= 16'd200;
 
 reg	[24:0]	combo_cnt;
@@ -97,12 +100,12 @@ wire [23:0] sensor_column_size;
 wire [23:0] sensor_row_mode;
 wire [23:0] sensor_column_mode;
 
-assign sensor_start_row 		= iZOOM_MODE_SW ?  24'h010036 : 24'h010000;
-assign sensor_start_column 		= iZOOM_MODE_SW ?  24'h020010 : 24'h020000;
-assign sensor_row_size	 		= iZOOM_MODE_SW ?  24'h0303BF : 24'h03077F;
-assign sensor_column_size 		= iZOOM_MODE_SW ?  24'h0404FF : 24'h0409FF;
-assign sensor_row_mode 			= iZOOM_MODE_SW ?  24'h220000 : 24'h220011;
-assign sensor_column_mode		= iZOOM_MODE_SW ?  24'h230000 : 24'h230011;
+assign sensor_start_row 		= iZOOM_MODE_SW ?  24'h010000 : 24'h010000;
+assign sensor_start_column 		= iZOOM_MODE_SW ?  24'h020000 : 24'h020000;
+assign sensor_row_size	 		= iZOOM_MODE_SW ?  24'h0303E8 : 24'h03077F;
+assign sensor_column_size 		= iZOOM_MODE_SW ?  24'h0403E8 : 24'h0409FF;
+assign sensor_row_mode 			= iZOOM_MODE_SW ?  24'h220011 : 24'h220011;
+assign sensor_column_mode		= iZOOM_MODE_SW ?  24'h230011 : 24'h230011;
 
 always@(posedge iCLK or negedge iRST_N)
 	begin
@@ -118,7 +121,7 @@ always@(posedge iCLK or negedge iRST_N)
 
 assign 	exposure_adj_set = ({iexposure_adj_delay[0],iEXPOSURE_ADJ}==2'b10) ? 1 : 0 ;
 assign  exposure_adj_reset = ({iexposure_adj_delay[3:2]}==2'b10) ? 1 : 0 ;		
-assign  senosr_exposure_temp = iEXPOSURE_DEC_p ? (senosr_exposure - exposure_change_value) : (senosr_exposure + exposure_change_value);
+assign  senosr_exposure_temp = iEXPOSURE;//iEXPOSURE_DEC_p ? (senosr_exposure - exposure_change_value) : (senosr_exposure + exposure_change_value);
 
 always@(posedge iCLK or negedge iRST_N)
 	begin
@@ -202,27 +205,32 @@ begin
 
 	else if(LUT_INDEX<LUT_SIZE)
 		begin
-			case(mSetup_ST)
-			0:	begin
-					mI2C_DATA	<=	{8'hBA,LUT_DATA};
-					mI2C_GO		<=	1;
-					mSetup_ST	<=	1;
-				end
-			1:	begin
-					if(mI2C_END)
-					begin
-						if(!mI2C_ACK)
-						mSetup_ST	<=	2;
-						else
-						mSetup_ST	<=	0;							
-						mI2C_GO		<=	0;
+			if(iEnable == 1'b1) begin
+			
+				case(mSetup_ST)
+				0:	begin
+						mI2C_DATA	<=	{8'hBA,LUT_DATA};
+						mI2C_GO		<=	1;
+						mSetup_ST	<=	1;
 					end
-				end
-			2:	begin
-					LUT_INDEX	<=	LUT_INDEX+1;
-					mSetup_ST	<=	0;
-				end
-			endcase
+				1:	begin
+						if(mI2C_END)
+						begin
+							if(!mI2C_ACK)
+							mSetup_ST	<=	2;
+							else
+							mSetup_ST	<=	0;							
+							mI2C_GO		<=	0;
+						end
+					end
+				2:	begin
+						LUT_INDEX	<=	LUT_INDEX+1;
+						mSetup_ST	<=	0;
+					end
+				endcase
+			
+			end
+			
 		end
 end
 ////////////////////////////////////////////////////////////////////
@@ -232,7 +240,7 @@ begin
 	case(LUT_INDEX)
 	0	:	LUT_DATA	<=	24'h000000;
 	1	:	LUT_DATA	<=	24'h20c000;				//	Mirror Row and Columns
-	2	:	LUT_DATA	<=	{8'h09,16'h03DC};//	Exposure
+	2	:	LUT_DATA	<=	{8'h09,senosr_exposure};//	Exposure
 	3	:	LUT_DATA	<=	24'h050000;				//	H_Blanking
 	4	:	LUT_DATA	<=	24'h060019;				//	V_Blanking	
 	5	:	LUT_DATA	<=	24'h0A8000;				//	change latch
@@ -241,7 +249,7 @@ begin
 	8	:	LUT_DATA	<=	24'h2D0008;				//	Red Gain
 	9	:	LUT_DATA	<=	24'h2E0008;				//	Green 2 Gain
 	10	:	LUT_DATA	<=	24'h100051;				//	set up PLL power on
-	11	:	LUT_DATA	<=	24'h111f04;				//	PLL_m_Factor<<8+PLL_n_Divider
+	11	:	LUT_DATA	<=	24'h111F04;				//	PLL_m_Factor<<8+PLL_n_Divider
 	12	:	LUT_DATA	<=	24'h120001;				//	PLL_p1_Divider
 	13	:	LUT_DATA	<=	24'h100053;				//	set USE PLL	 
 	14	:	LUT_DATA	<=	24'h980000;				//	disble calibration 	
@@ -256,7 +264,7 @@ begin
 	23	:	LUT_DATA	<=	sensor_column_mode;		//	set column mode	 in bin mode
 	24	:	LUT_DATA	<=	24'h4901A8;				//	row black target		
 	25 :	LUT_DATA	<=	24'hA40019;				//
-	26 :	LUT_DATA	<=	24'h1E4106;				//
+	26 :	LUT_DATA	<=	24'h071F86;				// Output Control
 	default:LUT_DATA	<=	24'h000000;
 	endcase
 end

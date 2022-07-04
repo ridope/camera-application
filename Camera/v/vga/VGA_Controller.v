@@ -87,7 +87,7 @@ begin
 //		else if(ADDR > VIDEO_W*2/3 && ADDR <=VIDEO_W)
 //			bgr_data <= {8'h00, 8'h00, 8'hff}; // red
 //		else bgr_data <= 24'h0000; 
-		if (0<ADDR && ADDR <= VIDEO_W)
+		if (0<ADDR && ADDR <= 252 && V_Cont <= 252)
 			bgr_data <= {iBlue, iGreen, iRed};
 		else bgr_data <= 12'h000; 
     end

@@ -69,11 +69,13 @@ output 			oDone;
 output	[31:0]	oFrame_Cont;
 output			oDVAL;
 reg				Pre_FVAL;
+reg				Pre_LVAL;
 reg				mCCD_FVAL;
 reg				mCCD_LVAL;
 reg		[11:0]	mCCD_DATA;
 reg		[15:0]	X_Cont;
 reg		[15:0]	Y_Cont;
+
 reg		[31:0]	Frame_Cont;
 reg				mSTART;
 
@@ -104,6 +106,7 @@ begin
 	if(!iRST)
 	begin
 		Pre_FVAL	<=	0;
+		Pre_LVAL	<=	0;
 		mCCD_FVAL	<=	0;
 		mCCD_LVAL	<=	0;
 
@@ -113,23 +116,25 @@ begin
 	else
 	begin
 		Pre_FVAL	<=	iFVAL;
+		Pre_LVAL	<=	iLVAL;
+		mCCD_LVAL	<=	iLVAL;
+		
 		if( ({Pre_FVAL,iFVAL}==2'b01) && mSTART )
 			mCCD_FVAL	<=	1;
 		else if({Pre_FVAL,iFVAL}==2'b10)
 			mCCD_FVAL	<=	0;
-			mCCD_LVAL	<=	iLVAL;
+		
 		if(mCCD_FVAL)
-		begin
-			if(mCCD_LVAL)
-			begin
-				if(X_Cont<(COLUMN_WIDTH-1))
-				X_Cont	<=	X_Cont+1;
-				else
+		begin		
+			if(({Pre_LVAL,iLVAL}==2'b01 || {Pre_LVAL,iLVAL}==2'b11))
+				begin
+					X_Cont	<=	X_Cont+1;
+				end
+			else if ({Pre_LVAL,iLVAL}==2'b10)
 				begin
 					X_Cont	<=	0;
 					Y_Cont	<=	Y_Cont+1;
 				end
-			end
 		end
 		else
 		begin
@@ -170,6 +175,7 @@ reg	ifval_dealy;
 
 wire ifval_fedge;	
 reg	[15:0]	y_cnt_d;
+reg	[19:0]	pixel_cnt_d;
 
 
 always@(posedge iCLK or negedge iRST)
@@ -179,6 +185,7 @@ begin
 	else
 		y_cnt_d	<=	Y_Cont;	
 end
+
 
 
 always@(posedge iCLK or negedge iRST)

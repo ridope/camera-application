@@ -75,6 +75,8 @@ static void help(void)
 	puts("reboot             - Reboot CPU");
 	puts("trigger           - Takes a picture");
 	puts("reset		        - Reset the camera");
+	puts("expo		        - Sets the camera exposure");
+	puts("test		        - Sets the test control resgister");
 }
 
 static void trigger_camera(void){
@@ -84,6 +86,36 @@ static void trigger_camera(void){
 static void reset_camera(void)
 {
 	camera_input_trigger_write(0);
+}
+
+static void set_exposure(void){
+	char *str;
+	char *exposure_str;
+
+	printf("\e[94;1mInsert the exposure\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	exposure_str = get_token(&str);
+	
+	camera_input_exposure_write(atoi(exposure_str));
+}
+
+static void set_test(void){
+	char *str;
+	char *test_str;
+
+	printf("\e[94;1mInsert the test register value\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	test_str = get_token(&str);
+	
+	camera_input_exposure_write(atoi(test_str));
 }
 
 /*-----------------------------------------------------------------------*/
@@ -115,6 +147,10 @@ static void console_service(void)
 		trigger_camera();
 	else if(strcmp(token, "reset") == 0)
 		reset_camera();
+	else if(strcmp(token, "expo") == 0)
+		set_exposure();
+	else if(strcmp(token, "test") == 0)
+		set_test();
 
 
 	prompt();

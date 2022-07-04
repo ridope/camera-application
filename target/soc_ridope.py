@@ -37,14 +37,15 @@ class Camera(Module, AutoCSR):
         n_regs = 2
         regs_size = 16 # bits
 
-        img_size = 640*480 #pixels
+        img_size = 28*28 #pixels
 
         self.input = CSRStorage(n_regs*regs_size, fields=[
             CSRField("Trigger",  size=1, description="Triggers the sensor to start/stop the capture.", pulse=True),
             CSRField("Reset", size=1, description="Resets the sensor.", reset=1, pulse=True),
+            CSRField("Exposure", size=16, description="Sensor exposure", reset=1000),
         ])
-        self.output = CSRStatus(16, fields=[
-            CSRField("Image",  size=16, description="The image captured by the sensor."),
+        self.output = CSRStatus(fields=[
+            CSRField("Image",  size=img_size, description="The image captured by the sensor."),
         ])
 
         sdram_clock_pad = platform.request("sdram_clock")
@@ -145,7 +146,7 @@ class Camera(Module, AutoCSR):
             i_REF_CLK = sys_clk,
             i_RESET_N = 1,
             # FIFO write side
-            i_WR_DATA = Cat(sccd_b[4:8], sccd_g[4:8],sccd_r[4:8],0,0,0,0),
+            i_WR_DATA = Cat(sccd_b[8:12], sccd_g[8:12],sccd_r[8:12],0,0,0,0),
             i_WR = sccd_dval,
             i_WR_ADDR = 0,
             i_WR_MAX_ADDR = 640*480,
@@ -196,14 +197,14 @@ class Camera(Module, AutoCSR):
             i_iFVAL = rccd_fval,
             i_iLVAL = rccd_lval,
             i_iSTART = ~sw_pads[1]|auto_start,
-            i_iEND = capture_cmd_n,
-            i_iCLK = ~d5m_pixclk,
+            i_iEND = ~sw_pads[0],#capture_cmd_n,
+            i_iCLK = d5m_pixclk,
             i_iRST = dly_rst_2
         )
 
         # D5M raw date convert to RGB data
         self.specials += Instance("RAW2RGB",
-            i_iCLK = d5m_pixclk,
+            i_iCLK = ~d5m_pixclk,
             i_iRST = dly_rst_1,
             i_iDATA = mccd_data,
             i_iDVAL = mccd_dval,
@@ -231,6 +232,7 @@ class Camera(Module, AutoCSR):
             # Host side
             i_iCLK = sys_clk,
             i_iRST_N = dly_rst_2,
+            i_iEXPOSURE = self.input.fields.Exposure,
             i_iEXPOSURE_ADJ = sw_pads[2],
             i_iEXPOSURE_DEC_p = sw_pads[3],
             i_iZOOM_MODE_SW = sw_pads[9],
@@ -238,6 +240,27 @@ class Camera(Module, AutoCSR):
             o_I2C_SCLK = sensor_pads.sclk,
             io_I2C_SDAT = sensor_pads.sdata
         )
+
+        counter = Signal(32)
+        fake_read_data = Signal(12)
+        counter.eq(0)
+
+        self.sync.vga += [
+            If(read,
+                counter.eq(counter+1),
+
+                If((counter>0) & (counter <= 320),
+                    fake_read_data.eq(3840),
+                ).Elif(
+                    (counter>320) & (counter <= 640),
+                    fake_read_data.eq(15),
+                ).Else(
+                    fake_read_data.eq(0),
+                )
+            ).Else(
+                counter.eq(0),
+            )
+        ]
 
         # VGA Controller module
         self.specials += Instance("VGA_Controller",

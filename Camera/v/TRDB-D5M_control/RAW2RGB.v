@@ -71,6 +71,9 @@ reg		[12:0]	mCCD_G;
 reg		[11:0]	mCCD_B;
 reg				mDVAL;
 
+(* noprune *) reg		[23:0]	Pixel_Cont;
+(* noprune *) reg		[23:0]	Pixel_Cont_bayer;
+
 assign	oRed	=	mCCD_R[11:0];
 assign	oGreen	=	mCCD_G[12:1];
 assign	oBlue	=	mCCD_B[11:0];
@@ -92,6 +95,7 @@ begin
 		mDATAd_0<=	0;
 		mDATAd_1<=	0;
 		mDVAL	<=	0;
+		Pixel_Cont <= 0;
 	end
 	else
 	begin
@@ -122,6 +126,31 @@ begin
 			mCCD_G	<=	mDATAd_0+mDATA_1;
 			mCCD_B	<=	mDATA_0;
 		end
+		
+		if(oDVAL==1'b1)
+			begin
+				Pixel_Cont <= Pixel_Cont + 1;
+			end
+		else 
+			begin
+				if({iY_Cont,iX_Cont}==22'b0)
+				begin
+					Pixel_Cont <= 0;
+				end
+			end
+			
+			
+		if(iDVAL==1'b1)
+			begin
+				Pixel_Cont_bayer <= Pixel_Cont_bayer + 1;
+			end
+		else 
+			begin
+				if({iY_Cont,iX_Cont}==22'b0)
+				begin
+					Pixel_Cont_bayer <= 0;
+				end
+			end
 	end
 end
 

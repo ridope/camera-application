@@ -42,6 +42,7 @@
 
 module CCD_Capture(	oDATA,
 					oDVAL,
+					oFrameNew,
 					oX_Cont,
 					oY_Cont,
 					oDone,
@@ -66,6 +67,7 @@ output	[11:0]	oDATA;
 output	[15:0]	oX_Cont;
 output	[15:0]	oY_Cont;
 output 			oDone;
+output 			oFrameNew;
 output	[31:0]	oFrame_Cont;
 output			oDVAL;
 reg				Pre_FVAL;
@@ -119,10 +121,16 @@ begin
 		Pre_LVAL	<=	iLVAL;
 		mCCD_LVAL	<=	iLVAL;
 		
-		if( ({Pre_FVAL,iFVAL}==2'b01) && mSTART )
+		if( ({Pre_FVAL,iFVAL}==2'b01) && mSTART ) begin
 			mCCD_FVAL	<=	1;
-		else if({Pre_FVAL,iFVAL}==2'b10)
+			oFrameNew 	<= 1;
+		end
+		else if({Pre_FVAL,iFVAL}==2'b10) begin
 			mCCD_FVAL	<=	0;
+			oFrameNew 	<= 0;
+		end
+		else
+			oFrameNew 	<= 0;
 		
 		if(mCCD_FVAL)
 		begin		

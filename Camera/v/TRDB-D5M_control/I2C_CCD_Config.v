@@ -43,6 +43,8 @@ module I2C_CCD_Config (	//	Host Side
 						iCLK,
 						iRST_N,
 						iEXPOSURE,
+						iRowSize,
+						iColSize,
 						iZOOM_MODE_SW,
 						iEXPOSURE_ADJ,
 						iEXPOSURE_DEC_p,
@@ -56,6 +58,8 @@ module I2C_CCD_Config (	//	Host Side
 input			iCLK;
 input			iRST_N;
 input 		iEnable;
+input 	[15:0]	iRowSize;
+input 	[15:0]	iColSize;
 input 			iZOOM_MODE_SW;
 
 //	I2C Side
@@ -102,8 +106,8 @@ wire [23:0] sensor_column_mode;
 
 assign sensor_start_row 		= iZOOM_MODE_SW ?  24'h010000 : 24'h010000;
 assign sensor_start_column 		= iZOOM_MODE_SW ?  24'h020000 : 24'h020000;
-assign sensor_row_size	 		= iZOOM_MODE_SW ?  24'h0303E8 : 24'h03077F;
-assign sensor_column_size 		= iZOOM_MODE_SW ?  24'h0403E8 : 24'h0409FF;
+assign sensor_row_size	 		= iZOOM_MODE_SW ?  {8'h03,iRowSize} : 24'h03077F;
+assign sensor_column_size 		= iZOOM_MODE_SW ?  {8'h04,iColSize} : 24'h0409FF;
 assign sensor_row_mode 			= iZOOM_MODE_SW ?  24'h220011 : 24'h220011;
 assign sensor_column_mode		= iZOOM_MODE_SW ?  24'h230011 : 24'h230011;
 

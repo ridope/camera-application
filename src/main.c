@@ -76,7 +76,9 @@ static void help(void)
 	puts("trigger           - Takes a picture");
 	puts("reset		        - Reset the camera");
 	puts("expo		        - Sets the camera exposure");
+	puts("size				- Sets the output image size");
 	puts("test		        - Sets the test control resgister");
+	puts("get				- Gets the counter from logic");
 }
 
 static void trigger_camera(void){
@@ -86,6 +88,31 @@ static void trigger_camera(void){
 static void reset_camera(void)
 {
 	camera_input_trigger_write(0);
+}
+
+static void set_size(void){
+	char *str;
+	char *row_str;
+	char *col_str;
+
+	printf("\e[94;1mInsert the row size\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	row_str = get_token(&str);
+	
+	printf("\e[94;1mInsert the column size\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	col_str = get_token(&str);
+	
+	camera_d5m_control_rowsize_write(atoi(row_str));
+	camera_d5m_control_colsize_write(atoi(col_str));
 }
 
 static void set_exposure(void){
@@ -116,6 +143,10 @@ static void set_test(void){
 	test_str = get_token(&str);
 	
 	camera_input_exposure_write(atoi(test_str));
+}
+
+static void get_counter(void){
+	printf("\e[94;1mCounter\e[0m> %d\n", COUNTER_DRIVER->data);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -151,7 +182,10 @@ static void console_service(void)
 		set_exposure();
 	else if(strcmp(token, "test") == 0)
 		set_test();
-
+	else if(strcmp(token, "size") == 0)
+		set_size();
+	else if(strcmp(token, "get") == 0)
+		get_counter();
 
 	prompt();
 }

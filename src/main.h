@@ -19,6 +19,11 @@ typedef struct  {
     uint16_t status;
 } SPERIPH_TypeDef;
 
+typedef struct {
+    uint16_t data;
+} COUNTER_TypeDef;
+
 #define SPERIPH_DRIVER      ((SPERIPH_TypeDef *)        CSR_CAMERA_BASE)
+#define COUNTER_DRIVER      ((COUNTER_TypeDef *)        LOGIC_MEMORY_BASE)
 
 #endif

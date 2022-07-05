@@ -77,6 +77,7 @@ static void help(void)
 	puts("reset		        - Reset the camera");
 	puts("expo		        - Sets the camera exposure");
 	puts("size				- Sets the output image size");
+	puts("start				- Sets the readout image start");
 	puts("test		        - Sets the test control resgister");
 	puts("get				- Gets the counter from logic");
 }
@@ -94,6 +95,10 @@ static void set_size(void){
 	char *str;
 	char *row_str;
 	char *col_str;
+	D5M_CONTROL_TypeDef camera;
+	
+	uint64_t *reg = (uint64_t *) &camera;
+	*reg = camera_control_read();
 
 	printf("\e[94;1mInsert the row size\e[0m> ");
 	do 
@@ -102,6 +107,8 @@ static void set_size(void){
 	}while(str == NULL);
 
 	row_str = get_token(&str);
+
+	camera.row_size = atoi(row_str);
 	
 	printf("\e[94;1mInsert the column size\e[0m> ");
 	do 
@@ -110,10 +117,54 @@ static void set_size(void){
 	}while(str == NULL);
 
 	col_str = get_token(&str);
+
+	camera.col_size = atoi(col_str);
 	
-	camera_d5m_control_rowsize_write(atoi(row_str));
-	camera_d5m_control_colsize_write(atoi(col_str));
+	camera_control_write(*reg);
+	printf("Row size: %d\n", camera.row_size);
+	printf("Col size: %d\n", camera.col_size);
+	printf("Row start: %d\n", camera.row_start);
+	printf("Col start: %d\n", camera.col_start);
 }
+
+static void set_start(void){
+	char *str;
+	char *row_str;
+	char *col_str;
+
+	D5M_CONTROL_TypeDef camera;
+	
+	uint64_t *reg = (uint64_t *) &camera;
+	*reg = camera_control_read();
+
+	printf("\e[94;1mInsert the row start\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	row_str = get_token(&str);
+
+	camera.row_start = atoi(row_str);
+	
+	printf("\e[94;1mInsert the column start\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	col_str = get_token(&str);
+
+	camera.col_start = atoi(col_str);
+
+	camera_control_write(*reg);
+	printf("Row size: %d\n", camera.row_size);
+	printf("Col size: %d\n", camera.col_size);
+	printf("Row start: %d\n", camera.row_start);
+	printf("Col start: %d\n", camera.col_start);
+
+}
+
 
 static void set_exposure(void){
 	char *str;
@@ -184,8 +235,11 @@ static void console_service(void)
 		set_test();
 	else if(strcmp(token, "size") == 0)
 		set_size();
+	else if(strcmp(token, "start") == 0)
+		set_start();
 	else if(strcmp(token, "get") == 0)
 		get_counter();
+	
 
 	prompt();
 }

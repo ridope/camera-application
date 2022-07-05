@@ -13,26 +13,18 @@ from migen.genlib.cdc import BlindTransfer
 class Camera(Module, AutoCSR):
     
     def __init__(self, platform):
-        n_regs = 2
-        regs_size = 16 # bits
-
-        img_size = 28*28 #pixels
-
-        self.input = CSRStorage(n_regs*regs_size, fields=[
+        self.input = CSRStorage(fields=[
             CSRField("Trigger",  size=1, description="Triggers the sensor to start/stop the capture.", pulse=True),
             CSRField("Reset", size=1, description="Resets the sensor.", reset=1, pulse=True),
             CSRField("Exposure", size=16, description="Sensor exposure", reset=1000),
         ])
 
-        self.d5m_control = CSRStorage(fields=[
+        self.control = CSRStorage(fields=[
             CSRField("RowSize", size=16, description="Sensor Row Size", reset=1919),
             CSRField("ColSize", size=16, description="Sensor Col Size", reset=2559),
-        ])
-
-        # self.output = CSRStatus(fields=[
-        #     CSRField("Image",  size=img_size, description="The image captured by the sensor."),
-        # ])
-        
+            CSRField("StartRow", size=16, description="Sensor Row start", reset=0),
+            CSRField("StartCol", size=16, description="Sensor Col start", reset=0),
+        ])     
         
         sdram_clock_pad = platform.request("sdram_clock")
         vga_pads = platform.request("vga")
@@ -226,8 +218,10 @@ class Camera(Module, AutoCSR):
             i_iRST_N = dly_rst_2,
             i_iEnable = sw_pads[5],
             i_iEXPOSURE = self.input.fields.Exposure,
-            i_iRowSize = self.d5m_control.fields.RowSize,
-            i_iColSize = self.d5m_control.fields.ColSize,
+            i_iRowSize = self.control.fields.RowSize,
+            i_iColSize = self.control.fields.ColSize,
+            i_iStartRow = self.control.fields.StartRow,
+            i_iStartCol = self.control.fields.StartCol,
             i_iEXPOSURE_ADJ = sw_pads[2],
             i_iEXPOSURE_DEC_p = sw_pads[3],
             i_iZOOM_MODE_SW = sw_pads[9],

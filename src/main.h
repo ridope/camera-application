@@ -23,6 +23,13 @@ typedef struct {
     uint16_t data;
 } COUNTER_TypeDef;
 
+typedef struct {
+    uint16_t row_size;
+    uint16_t col_size;
+    uint16_t row_start;
+    uint16_t col_start;
+} D5M_CONTROL_TypeDef;
+
 #define SPERIPH_DRIVER      ((SPERIPH_TypeDef *)        CSR_CAMERA_BASE)
 #define COUNTER_DRIVER      ((COUNTER_TypeDef *)        LOGIC_MEMORY_BASE)
 

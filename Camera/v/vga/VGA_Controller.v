@@ -2,7 +2,10 @@ module	VGA_Controller(	//	Host Side
 						iRed,
 						iGreen,
 						iBlue,
+                  iVideo_H,
+                  iVideo_W,
 						oRequest,
+                  oFrameDone,
 						//	VGA Side
 						oVGA_R,
 						oVGA_G,
@@ -19,6 +22,9 @@ module	VGA_Controller(	//	Host Side
 input		[3:0]	iRed;
 input		[3:0]	iGreen;
 input		[3:0]	iBlue;
+input    [15:0] iVideo_H;
+input    [15:0] iVideo_W;
+output   reg         oFrameDone;
 output	reg			oRequest;
 //	VGA Side
 output		[3:0]	oVGA_R;
@@ -54,22 +60,37 @@ always@(posedge iVGA_CLK,negedge iRST_n)
 begin
   if (!iRST_n) begin
      ADDR<=19'd0;
-	  oRequest<=0;
   end
   else if (cBLANK_n==1'b1) begin
      ADDR<=ADDR+1;
-	  oRequest<=1;
+
   end
 	  else begin
 	    ADDR<=19'd0;
-		 oRequest<=0;
 	 end
 end
 										
 reg [11:0] bgr_data;
 
-parameter VIDEO_W	= 640;
-parameter VIDEO_H	= 480;
+//	Horizontal Parameter	( Pixel )
+parameter	H_SYNC_CYC	=	96;
+parameter	H_SYNC_BACK	=	48;
+parameter	H_SYNC_ACT	=	640;	
+parameter	H_SYNC_FRONT=	16;
+parameter	H_SYNC_TOTAL=	800;
+
+//	Virtical Parameter		( Line )
+parameter	V_SYNC_CYC	=	2;
+parameter	V_SYNC_BACK	=	33;
+parameter	V_SYNC_ACT	=	480;	
+parameter	V_SYNC_FRONT=	10;
+parameter	V_SYNC_TOTAL=	525;
+//	Start Offset
+parameter	X_START		=	H_SYNC_BACK;
+parameter	Y_START		=	V_SYNC_BACK;
+
+// parameter VIDEO_W	= 80;
+// parameter VIDEO_H	= Y_START+80;
 
 
 always@(posedge iVGA_CLK)
@@ -77,6 +98,8 @@ begin
   if (~iRST_n)
   begin
      bgr_data<=12'h000;
+     oRequest<=0;
+     oFrameDone<=1;
   end
     else
     begin
@@ -87,10 +110,29 @@ begin
 //		else if(ADDR > VIDEO_W*2/3 && ADDR <=VIDEO_W)
 //			bgr_data <= {8'h00, 8'h00, 8'hff}; // red
 //		else bgr_data <= 24'h0000; 
-		//if (0<ADDR && ADDR <= 252 && V_Cont <= 252)
-      if (0<ADDR)
-			bgr_data <= {iBlue, iGreen, iRed};
-		else bgr_data <= 12'h000; 
+		if (ADDR > 0 && ADDR <= iVideo_W && V_Cont < (iVideo_H+Y_START))
+      //if (0<ADDR)
+      begin
+         bgr_data <= {iBlue, iGreen, iRed};
+         oRequest<=1;
+      end
+		else 
+      begin
+         bgr_data <= 12'h000; 
+         oRequest<=0;
+      end
+
+      //if (ADDR > 0 && V_Cont > Y_START && ADDR%VIDEO_W == 0 && V_Cont%(VIDEO_H+1)==0) 
+      //if (ADDR%VIDEO_W == 0 && V_Cont%VIDEO_H == 0)
+      if(ADDR == 0 && V_Cont == (Y_START-2)) 
+      begin
+         oFrameDone<=1;
+      end
+      else 
+      begin
+         oFrameDone<=0;
+      end
+
     end
 end
 
@@ -127,7 +169,7 @@ always@(posedge mHS,negedge iRST_n)
 begin
   if (!iRST_n)
      V_Cont<=19'd0;
-  else if (mVS==1'b1 && H_Cont==0)
+  else if (mVS==1'b1 && ADDR==0)
      V_Cont<=V_Cont+1;
   else
 	  V_Cont<=19'd0;

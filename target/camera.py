@@ -20,11 +20,24 @@ class Camera(Module, AutoCSR):
         ])
 
         self.control = CSRStorage(fields=[
-            CSRField("RowSize", size=16, description="Sensor Row Size", reset=1919),
-            CSRField("ColSize", size=16, description="Sensor Col Size", reset=2559),
-            CSRField("StartRow", size=16, description="Sensor Row start", reset=0),
-            CSRField("StartCol", size=16, description="Sensor Col start", reset=0),
+            CSRField("RowSize", size=16, description="Sensor Row Size", reset=239),
+            CSRField("ColSize", size=16, description="Sensor Col Size", reset=319),
+            CSRField("StartRow", size=16, description="Sensor Row start", reset=1200),
+            CSRField("StartCol", size=16, description="Sensor Col start", reset=1100),
         ])     
+
+        self.sram = CSRStorage(fields=[
+            CSRField("RD_L", size=9, description="SRAM Read Length", reset=32),
+            CSRField("WR_L", size=9, description="SRAM Write Length", reset=32),
+        ])
+
+        self.vga = CSRStorage(fields=[
+            CSRField("W", size=16, description="VGA Video Width", reset=80),
+            CSRField("H", size=16, description="VGA Video Height", reset=60),
+        ])
+
+        self.output = Signal(8)
+        self.read_en = Signal()
         
         sdram_clock_pad = platform.request("sdram_clock")
         vga_pads = platform.request("vga")
@@ -80,7 +93,8 @@ class Camera(Module, AutoCSR):
         dly_rst_4 = Signal()
 
         framenew_capture = Signal()
-        framenew_raw = Signal()
+        
+        self.framedone_vga = Signal()
 
         vga_r = Signal(4)
         vga_g = Signal(4)
@@ -131,16 +145,16 @@ class Camera(Module, AutoCSR):
             i_WR = sccd_dval,
             i_WR_ADDR = 0,
             i_WR_MAX_ADDR = 640*480,
-            i_WR_LENGTH = 128,
-            i_WR_LOAD = framenew_raw,
+            i_WR_LENGTH = self.sram.fields.WR_L,
+            i_WR_LOAD = framenew_capture,
             i_WR_CLK = d5m_pixclk,
             # FIFO read side
             o_RD_DATA = read_data,
             i_RD = read,
             i_RD_ADDR = 0,
             i_RD_MAX_ADDR = 640*480,
-            i_RD_LENGTH = 128,
-            i_RD_LOAD = ~dly_rst_0,
+            i_RD_LENGTH = self.sram.fields.RD_L,
+            i_RD_LOAD = self.framedone_vga,
             i_RD_CLK = ~vga_ctrl_clk,
             # SDRAM side
             o_SA = sdram_pads.a,
@@ -180,18 +194,16 @@ class Camera(Module, AutoCSR):
             i_iLVAL = rccd_lval,
             i_iSTART = ~sw_pads[1]|auto_start,
             i_iEND = ~sw_pads[0],#capture_cmd_n,
-            i_iCLK = d5m_pixclk,
+            i_iCLK = ~d5m_pixclk,
             i_iRST = dly_rst_2
         )
 
         # D5M raw date convert to RGB data
         self.specials += Instance("RAW2RGB",
-            i_iCLK = ~d5m_pixclk,
-            i_iRST = dly_rst_1,
+            i_iCLK = d5m_pixclk,
+            i_iRST = ~framenew_capture,
             i_iDATA = mccd_data,
             i_iDVAL = mccd_dval,
-            i_iFrameNew = framenew_capture,
-            o_oFrameNew = framenew_raw,
             o_oRed = sccd_r,
             o_oGreen = sccd_g,
             o_oBlue = sccd_b,
@@ -255,9 +267,12 @@ class Camera(Module, AutoCSR):
         self.specials += Instance("VGA_Controller",
             # Host side
             o_oRequest = read,
+            o_oFrameDone = self.framedone_vga,
             i_iRed = read_data[8:12],
             i_iGreen = read_data[4:8],
             i_iBlue = read_data[0:4],
+            i_iVideo_W = self.vga.fields.W,
+            i_iVideo_H = self.vga.fields.H,
             # VGA side
             o_oVGA_R = vga_r,
             o_oVGA_G = vga_g,
@@ -269,6 +284,10 @@ class Camera(Module, AutoCSR):
             i_iRST_n = dly_rst_2
         )
 
+        self.comb += [
+            self.read_en.eq(read),
+            self.output.eq(read_data[0:4])
+        ]
 
         platform.add_source_dir(path="../Camera/")
         platform.add_source_dir(path="../Camera/v/")

@@ -78,6 +78,8 @@ static void help(void)
 	puts("expo		        - Sets the camera exposure");
 	puts("size				- Sets the output image size");
 	puts("start				- Sets the readout image start");
+	puts("len				- Sets the SDRAM RD/WR length");
+	puts("vga				- Sets the VGA output");
 	puts("test		        - Sets the test control resgister");
 	puts("get				- Gets the counter from logic");
 }
@@ -165,6 +167,65 @@ static void set_start(void){
 
 }
 
+static void set_length(void){
+	char *str;
+	char *row_str;
+	char *col_str;
+
+	printf("\e[94;1mInsert the Read length \e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	row_str = get_token(&str);
+
+	int read_l = atoi(row_str);
+	
+	printf("\e[94;1mInsert the Write length\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	col_str = get_token(&str);
+
+	int write_l = atoi(col_str);
+
+	camera_sram_rd_l_write(read_l);
+	camera_sram_wr_l_write(write_l);
+}
+
+
+static void set_vga(void){
+	char *str;
+	char *row_str;
+	char *col_str;
+
+	printf("\e[94;1mInsert the VGA Width \e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	row_str = get_token(&str);
+
+	int vga_w = atoi(row_str);
+	
+	printf("\e[94;1mInsert the Write length\e[0m> ");
+	do 
+	{
+		str = readstr();
+	}while(str == NULL);
+
+	col_str = get_token(&str);
+
+	int vga_h = atoi(col_str);
+
+	camera_vga_w_write(vga_w);
+	camera_vga_h_write(vga_h);
+}
+
 
 static void set_exposure(void){
 	char *str;
@@ -239,7 +300,10 @@ static void console_service(void)
 		set_start();
 	else if(strcmp(token, "get") == 0)
 		get_counter();
-	
+	else if(strcmp(token, "len") == 0)
+		set_length();
+	else if(strcmp(token, "vga") == 0)
+		set_vga();
 
 	prompt();
 }

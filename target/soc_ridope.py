@@ -107,29 +107,33 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         self.add_csr("camera")
 
         # infer the logic block with memory
-        memdepth = 16
-        data_width = 16
+        memdepth = 60*80
+        data_width = 8
+        length = memdepth * data_width//8
         self.submodules.logicmem = MemLogic(data_width,memdepth)
 
         # define the memory region size/location
         # memdepth is the depth of the memory inferred in your logic block
         # the length is in bytes, so for example if the data_width of your memory
         # block is 32 bits, the total length is memdepth * 4
-        self.add_memory_region("logic_memory", self.mem_map["logic_memory"], memdepth * data_width//8, type='cached')
+        self.add_memory_region("logic_memory", self.mem_map["logic_memory"], length, type='cached')
 
         self.add_wb_slave(self.mem_map["logic_memory"], self.logicmem.bus)
 
         # Writing in the scratch-pad mem
         prescaler = Signal(max=(sys_clk_freq-1))
-        counter = Signal(data_width)
+        addr = Signal(max=length)
 
-        self.sync += [
-            If(prescaler==0,
-                self.logicmem.logic_write_data.eq(counter),
-                counter.eq(counter+1)
+        self.sync.vga += [
+            If(self.camera.read_en==1,
+                self.logicmem.logic_write_data.eq(self.camera.output),
+                self.logicmem.local_adr.eq(addr),
+                addr.eq(addr+8)
             ),
 
-            prescaler.eq(prescaler+1)
+            If(self.camera.framedone_vga==1,
+                addr.eq(0)
+            )
         ]
 
 

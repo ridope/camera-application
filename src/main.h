@@ -13,6 +13,8 @@
 
 #include <generated/mem.h>
 
+#include "comm_ridope.h"
+
 typedef struct  {
     uint32_t trigger;
     uint32_t reset;

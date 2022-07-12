@@ -80,7 +80,7 @@ static void help(void)
 	puts("start				- Sets the readout image start");
 	puts("len				- Sets the SDRAM RD/WR length");
 	puts("vga				- Sets the VGA output");
-	puts("test		        - Sets the test control resgister");
+	puts("test		        - Sets the test pattern resgister");
 	puts("get				- Gets the counter from logic");
 }
 
@@ -246,7 +246,7 @@ static void set_test(void){
 	char *str;
 	char *test_str;
 
-	printf("\e[94;1mInsert the test register value\e[0m> ");
+	printf("\e[94;1mInsert the test pattern value\e[0m> ");
 	do 
 	{
 		str = readstr();
@@ -254,7 +254,7 @@ static void set_test(void){
 
 	test_str = get_token(&str);
 	
-	camera_input_exposure_write(atoi(test_str));
+	camera_test_pattern_write(atoi(test_str));
 }
 
 static void get_counter(void){

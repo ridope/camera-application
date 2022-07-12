@@ -6,8 +6,7 @@ include $(SOC_DIRECTORY)/software/common.mak
 OBJDIR = ./obj
 EXT_LIBDIR = ../ext_lib
 
-OBJECTS := $(OBJDIR)/comm_ridope.o \
-		$(OBJDIR)/isr.o \
+OBJECTS := $(OBJDIR)/isr.o \
 		$(OBJDIR)/main.o \
 		$(OBJDIR)/crt0.o
 

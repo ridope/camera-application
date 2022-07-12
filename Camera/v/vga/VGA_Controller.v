@@ -12,6 +12,7 @@ module	VGA_Controller(	//	Host Side
 						oVGA_B,
 						oVGA_H_SYNC,
 						oVGA_V_SYNC,
+                  oVGA_CLOCK,
 
 						//	Control Signal
 						iVGA_CLK,
@@ -30,6 +31,7 @@ output	reg			oRequest;
 output		[3:0]	oVGA_R;
 output		[3:0]	oVGA_G;
 output		[3:0]	oVGA_B;
+output              oVGA_CLOCK;
 output	reg			oVGA_H_SYNC;
 output	reg			oVGA_V_SYNC;
 
@@ -47,6 +49,7 @@ reg [18:0] H_Cont/*synthesis noprune*/;
 reg [18:0] V_Cont/*synthesis noprune*/;
 ////
 assign rst = ~iRST_n;
+assign  oVGA_CLOCK = iVGA_CLK; 
 
 video_sync_generator LTM_ins (.vga_clk(iVGA_CLK),
                               .reset(rst),

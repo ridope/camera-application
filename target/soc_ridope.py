@@ -32,18 +32,17 @@ from litex.soc.interconnect import wishbone
 
 from migen.genlib.cdc import BlindTransfer
 
-from camera import Camera
+from camera_d8m import Camera_D8M
 from memlogic import MemLogic
 
 class _CRG(Module): # Clock Region definition
     def __init__(self, platform, sys_clk_freq):
         self.rst = Signal()
         self.clock_domains.cd_sys = ClockDomain()
+        self.clock_domains.cd_d8m = ClockDomain()
         self.clock_domains.cd_vga = ClockDomain()
         self.clock_domains.cd_sdram = ClockDomain()
         self.clock_domains.cd_sdram_ps = ClockDomain()
-        self.clock_domains.cd_d5m = ClockDomain()
-        self.clock_domains.cd_counter = ClockDomain()
        
         clk50 = platform.request("clk50")
 
@@ -55,7 +54,7 @@ class _CRG(Module): # Clock Region definition
         pll.create_clkout(self.cd_sdram, sys_clk_freq*2)
         pll.create_clkout(self.cd_sdram_ps, sys_clk_freq*2, phase=-108)
         pll.create_clkout(self.cd_vga,  sys_clk_freq/2)
-        pll.create_clkout(self.cd_d5m,  sys_clk_freq/2)
+        pll.create_clkout(self.cd_d8m,  20e6)
         
 class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
 
@@ -75,19 +74,24 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         kwargs["integrated_main_ram_size"] = 0x10000 # 0 means external RAM is used, non 0 allocates main RAM internally
         kwargs["uart_name"] = "arduino_serial"
 
-        platform.add_extension([("trdb", 0,
-                        Subsignal("pixclk", Pins("V10")),
-                        Subsignal("d", Pins(
-                            "W13 AA14 AA15 W5 V5 W6 W7 V7",
-                            "W8 V8  W9  W10")),
-                        Subsignal("fval",    Pins("AA9")),
-                        Subsignal("lval",  Pins("AA10")),
-                        Subsignal("rstn",   Pins("Y11")),
-                        Subsignal("sclk", Pins("AA8")),
-                        Subsignal("sdata", Pins("Y8")),
-                        Subsignal("strobe",  Pins("AB10")),
-                        Subsignal("xclkin", Pins("AB12")),
-                        Subsignal("trigger", Pins("W11")),
+        platform.add_extension([("d8m", 0,
+                        Subsignal("mipi_d", Pins(
+                            "W9 V8 W8 V7 W7 W6 V5 W5",
+                            "AA15 AA14")),
+                        Subsignal("mipi_rst_n",   Pins("AA8")),
+                        Subsignal("mipi_clk", Pins("W10")),
+                        Subsignal("mipi_hs",    Pins("AA9")),
+                        Subsignal("mipi_vs",  Pins("AB10")),
+                        Subsignal("mipi_cs_n",   Pins("Y8")),
+                        Subsignal("mipi_ref_clk", Pins("AB11")),
+                        Subsignal("mipi_scl", Pins("AA5")),
+                        Subsignal("mipi_sda", Pins("Y4")),
+                        Subsignal("cam_pwdn_n",  Pins("Y7")),
+                        Subsignal("cam_scl", Pins("AA7")),
+                        Subsignal("cam_sda", Pins("Y6")), 
+                        Subsignal("mipi_clk_rsd", Pins("V10")), 
+                        Subsignal("mipi_mclk", Pins("AA6")),
+                        Subsignal("cam_resv", Pins("AB2")),  
                         IOStandard("3.3-V LVTTL")
                     )])
 
@@ -103,7 +107,7 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         self.submodules.crg = _CRG(platform, sys_clk_freq) # CRG instanciation   
        
         
-        self.submodules.camera = Camera(platform)
+        self.submodules.camera = Camera_D8M(platform)
         self.add_csr("camera")
 
         # infer the logic block with memory
@@ -124,17 +128,17 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         prescaler = Signal(max=(sys_clk_freq-1))
         addr = Signal(max=length)
 
-        self.sync.vga += [
-            If(self.camera.read_en==1,
-                self.logicmem.logic_write_data.eq(self.camera.output),
-                self.logicmem.local_adr.eq(addr),
-                addr.eq(addr+8)
-            ),
+        # self.sync.vga += [
+        #     If(self.camera.read_en==1,
+        #         self.logicmem.logic_write_data.eq(self.camera.output),
+        #         self.logicmem.local_adr.eq(addr),
+        #         addr.eq(addr+8)
+        #     ),
 
-            If(self.camera.framedone_vga==1,
-                addr.eq(0)
-            )
-        ]
+        #     If(self.camera.framedone_vga==1,
+        #         addr.eq(0)
+        #     )
+        # ]
 
 
 def main(): # Instanciating the SoC and options

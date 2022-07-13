@@ -40,7 +40,9 @@ class _CRG(Module): # Clock Region definition
         self.rst = Signal()
         self.clock_domains.cd_sys = ClockDomain()
         self.clock_domains.cd_d8m = ClockDomain()
-        self.clock_domains.cd_counter = ClockDomain()
+        self.clock_domains.cd_vga = ClockDomain()
+        self.clock_domains.cd_sdram = ClockDomain()
+        self.clock_domains.cd_sdram_ps = ClockDomain()
        
         clk50 = platform.request("clk50")
 
@@ -49,6 +51,9 @@ class _CRG(Module): # Clock Region definition
         self.comb += pll.reset.eq(self.rst)
         pll.register_clkin(clk50, 50e6)
         pll.create_clkout(self.cd_sys, sys_clk_freq)
+        pll.create_clkout(self.cd_sdram, sys_clk_freq*2)
+        pll.create_clkout(self.cd_sdram_ps, sys_clk_freq*2, phase=-108)
+        pll.create_clkout(self.cd_vga,  sys_clk_freq/2)
         pll.create_clkout(self.cd_d8m,  20e6)
         
 class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded

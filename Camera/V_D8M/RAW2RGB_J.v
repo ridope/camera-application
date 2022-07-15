@@ -9,7 +9,8 @@ input           VGA_VS ,
 input           VGA_HS ,	 
 output	[7:0] oRed,
 output 	[7:0] oGreen,
-output	[7:0] oBlue
+output	[7:0] oBlue,
+output         oDVAL
 
 );
 parameter D8M_VAL_LINE_MAX  = 637; 
@@ -66,12 +67,14 @@ RAW_RGB_BIN  bin(
       .RESET_N ( RD_EN ) , 
       .D0   ( mDAT0_0),
       .D1   ( mDAT0_1),
-      .X    ( mX_Cont [0] ),
-      .Y    ( mY_Cont [0] ),
+      .X    ( mX_Cont [0]),
+      .Y    ( mY_Cont [0]),
+      .iDVAL( VGA_VS & VGA_HS),
        
       .R    ( mCCD_R),
       .G    ( mCCD_G), 
-      .B    ( mCCD_B)
+      .B    ( mCCD_B),
+      .oDVAL(oDVAL),
 ); 
 
 

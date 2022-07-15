@@ -10,7 +10,11 @@ module MIPI_BRIDGE_CAMERA_Config   (
  output CAMERA_I2C_RELAESE,
  
  output [9:0] STEP ,
- output       VCM_RELAESE 
+ output       VCM_RELAESE,
+
+ input [7:0] TEST_REG,
+ input [15:0] WSIZE_REG,
+ input [15:0] HSIZE_REG
 
  ); 
  
@@ -42,7 +46,10 @@ MIPI_CAMERA_CONFIG  camiv(
    .I2C_SCL ( CAMERA_I2C_SCL_ ), 
    .I2C_SDA ( CAMERA_I2C_SDA),
    .INT_n   (),
-	.MIPI_CAMERA_RELAESE  ( CAMERA_I2C_RELAESE )
+	.MIPI_CAMERA_RELAESE  ( CAMERA_I2C_RELAESE ),
+   .TEST_REG(TEST_REG),
+   .WSIZE_REG(WSIZE_REG),
+   .HSIZE_REG(HSIZE_REG),
 );
 
 wire CLK_400K ; 

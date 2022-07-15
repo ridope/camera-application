@@ -40,15 +40,6 @@ wire  [17:0] Y  ;
 wire         ACTIV_C; 
 wire         ACTIV_V; 
 
-reg [7:0] temp_oR;
-reg [7:0] temp_oG;
-reg [7:0] temp_oB;
-
-assign oR = temp_oR[7:4];
-assign oG = temp_oG[7:4];
-assign oB = temp_oB[7:4];
-
-
 //--AUTO SUNY MODIFY TO NEGTIVE PULSE-- 
 
 AUTO_SYNC_MODIFY  RE(
@@ -119,20 +110,22 @@ VCM_I2C i2c2(
 //-----VIDEO MIXED  -- 
 
 always @( negedge VIDEO_CLK ) 
-   {temp_oR, temp_oG, temp_oB}  <=    
-   ((SW_FUC_LINE &  LINE )  ||  ( SW_FUC_ALL_CEN  &  ( ~VCM_END  &  LINE) ) )?  {8'hFF, 8'hFF, 8'h0} : 
-   ( !SW_Y )?  //( ACTIV_C ? 24'h555555 :  
-	{ iR, iG, iB }   : 
-   (SW_H_FREQ)?  { 
-     Y[15:8 ],
-     Y[15:8 ],
-     Y[15:8 ]
-   } :
-   {
-	   S[7:0],
-	   S[7:0],
-	   S[7:0]
-	 };
+   // {oR, oG, oB}  <=    
+   // ((SW_FUC_LINE &  LINE )  ||  ( SW_FUC_ALL_CEN  &  ( ~VCM_END  &  LINE) ) )?  {8'hF, 8'hF, 8'h0} : 
+   // ( !SW_Y )?  //( ACTIV_C ? 24'h555555 :  
+	// { iR, iG, iB }   : 
+   // (SW_H_FREQ)?  { 
+   //   Y[15:12 ],
+   //   Y[15:12 ],
+   //   Y[15:12 ]
+   // } :
+   // {
+	//    S[7:4],
+	//    S[7:4],
+	//    S[7:4]
+	//  };
+
+   {oR, oG, oB}  <=  { iR, iG, iB} ;
 	 
 endmodule 
 	 

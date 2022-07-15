@@ -8,7 +8,9 @@ input [9:0] D0,
 input [9:0] D1,
 input X,
 input Y,
+input iDVAL,
 
+output 					oDVAL,
 output reg		[9:0]	R,
 output reg		[9:0]	G, 
 output reg		[9:0]	B
@@ -16,10 +18,12 @@ output reg		[9:0]	B
 
 reg  [9:0]	rD0;
 reg  [9:0]	rD1;
+(* noprune *) reg  	    mDVAL;
 
 wire [10:0] T1,T2 ; 
 assign T1 = rD0+D1;
 assign T2 = rD1+D0;
+assign oDVAL = mDVAL;
 
 always@(posedge CLK or negedge RESET_N)
 begin
@@ -30,11 +34,13 @@ begin
 		B	<=	0;
 		rD0<=	0;
 		rD1<=	0;
+		mDVAL	<=	0;
 	end
 	else
 	begin
 		rD0	<=	D0;
 		rD1	<=	D1;
+		mDVAL		<=	iDVAL;
 		if({Y ,X }     == 2'b10)
 		begin
 			R	<=	 D0;

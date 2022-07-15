@@ -2,6 +2,11 @@ module MIPI_CAMERA_CONFIG  (
    input   RESET_N , 
 	input   TR_IN , 	
    input   CLK_50 ,
+
+
+   input [7:0] TEST_REG, 
+   input [15:0] WSIZE_REG,
+   input [15:0] HSIZE_REG,
 	
    output  I2C_SCL, 
    inout   I2C_SDA,

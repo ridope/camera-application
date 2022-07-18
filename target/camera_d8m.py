@@ -164,35 +164,19 @@ class Camera_D8M(Module, AutoCSR):
             )
         ]
 
-        #------ CMOS CCD_DATA TO RGB_DATA -- 
-        self.specials += Instance("RAW2RGB_J",
-            i_RST = lut_mipi_pixel_vs,
-            i_iDATA = lut_mipi_pixel_d,
-
-            i_VGA_CLK = mipi_pixel_clk_,
-            i_READ_Request = lut_mipi_pixel_hs&lut_mipi_pixel_vs,
-            i_VGA_HS = lut_mipi_pixel_hs,
-            i_VGA_VS = lut_mipi_pixel_vs,
-            
-            o_oRed = red,
-            o_oGreen = green,
-            o_oBlue = blue,
-            o_oDVAL = sram_write,
-        )
-
         # SDRAM Frame buffer
         self.specials += Instance("Sdram_Control",
             # Host Side
             i_CLK = sdram_ctrl_clk,
             i_RESET_N = btn_pads[0],
             # FIFO write side
-            i_WR_DATA = Cat(blue[4:8],green[4:8],red[4:8],0,0,0,0),
-            i_WR = sram_write,
+            i_WR_DATA = Cat(lut_mipi_pixel_d,0,0,0,0,0,0),
+            i_WR = lut_mipi_pixel_hs&lut_mipi_pixel_vs,
             i_WR_ADDR = 0,
             i_WR_MAX_ADDR = 640*480,
             i_WR_LENGTH = self.sram.fields.WR_L,
             i_WR_LOAD = ~dly_rst_0,#framenew_capture,
-            i_WR_CLK = ~mipi_pixel_clk_,
+            i_WR_CLK = mipi_pixel_clk_,
             # FIFO read side
             o_RD_DATA = sdram_rd_data,
             i_RD = read_request,
@@ -213,13 +197,29 @@ class Camera_D8M(Module, AutoCSR):
             o_DQM = sdram_pads.dm,
         )
 
+        #------ CMOS CCD_DATA TO RGB_DATA -- 
+        self.specials += Instance("RAW2RGB_J",
+            i_RST = lut_mipi_pixel_vs,
+            i_iDATA = sdram_rd_data,
+
+            i_VGA_CLK = vga_ctrl_clk,
+            i_READ_Request = read_request,
+            i_VGA_HS = vga_pads.hsync_n,
+            i_VGA_VS = vga_pads.vsync_n,
+            
+            o_oRed = red,
+            o_oGreen = green,
+            o_oBlue = blue,
+            o_oDVAL = sram_write,
+        )
+
         # VGA Controller module
         self.specials += Instance("VGA_Controller",
             # Host side
             o_oRequest = read_request,
-            i_iRed = sdram_rd_data[8:12],
-            i_iGreen = sdram_rd_data[4:8],
-            i_iBlue = sdram_rd_data[0:4],
+            i_iRed = red,
+            i_iGreen = green,
+            i_iBlue = blue,
 
             o_oFrameDone = self.framedone_vga,            
             #i_iVideo_W = self.vga.fields.W,

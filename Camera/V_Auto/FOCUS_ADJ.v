@@ -17,9 +17,9 @@ input   [7:0]     iR ,
 input   [7:0]     iG , 
 input   [7:0]     iB , 
 
-output  reg [7:0] oR , 
-output  reg [7:0] oG , 
-output  reg [7:0] oB , 
+output  reg [4:0] oR , 
+output  reg [4:0] oG , 
+output  reg [4:0] oB , 
 output            READY ,
 output            SCL , 
 inout             SDA , 
@@ -125,7 +125,7 @@ always @( negedge VIDEO_CLK )
 	//    S[7:4]
 	//  };
 
-   {oR, oG, oB}  <=  { iR, iG, iB} ;
+   {oR, oG, oB}  <=  { iR[7:4], iG[7:4], iB[7:4]} ;
 	 
 endmodule 
 	 

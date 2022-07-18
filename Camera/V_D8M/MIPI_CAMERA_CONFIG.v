@@ -537,7 +537,7 @@ case ( WCNT )
    206	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5001, 8'h01}; // BLC[0] on.
    207	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5002, 8'h08}; // vario pixel off
    208	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5901, 8'h00};
-   209	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5e00, 8'h00}; // test pattern off
+   209	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5e00, TEST_REG}; // test pattern off
    210	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5e01, 8'h41}; // window cut enable
    211	 :SLV8_REG16_DATA8<= { TIME_DELAY, 16'h0, 8'd10};
    212	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5780, 8'hfc};

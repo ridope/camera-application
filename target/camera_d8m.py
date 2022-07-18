@@ -270,10 +270,7 @@ class Camera_D8M(Module, AutoCSR):
             o_READY = ready,
             o_SCL = camera_i2c_scl_af,
             io_SDA = sensor_pads.mipi_sda
-        )
-
-         
-
+        )    
 
         platform.add_source_dir(path="../Camera/")
 

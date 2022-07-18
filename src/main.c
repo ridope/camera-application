@@ -255,6 +255,7 @@ static void set_test(void){
 	test_str = get_token(&str);
 	
 	camera_test_pattern_write(atoi(test_str));
+	camera_test_update_write(0);
 }
 
 static void get_counter(void){

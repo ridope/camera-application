@@ -26,7 +26,8 @@ class Camera_D8M(Module, AutoCSR):
         ])
 
         self.test = CSRStorage(fields=[
-            CSRField("Pattern", size=8, description="Test Pattern Register", reset=146)
+            CSRField("Pattern", size=8, description="Test Pattern Register", reset=146),
+            CSRField("Update", size=1, description="Triggers flag to update camera", reset=1, pulse=True),
         ])
 
         self.sram = CSRStorage(fields=[
@@ -64,6 +65,9 @@ class Camera_D8M(Module, AutoCSR):
         vga_ctrl_clk = Signal()
 
         ready = Signal()
+        d8m_ck_hz = Signal()
+        d8m_ck_hz2 = Signal()
+        d8m_ck_hz3 = Signal()
 
         red = Signal(8)
         green = Signal(8)
@@ -111,7 +115,7 @@ class Camera_D8M(Module, AutoCSR):
 
         self.comb += sdram_clock_pad.eq(sdram_clk_ps)
         self.comb += vga_ctrl_clk.eq(~vga_clk)
-        self.comb += led_pads.eq(sw_pads)
+        #self.comb += led_pads.eq(sw_pads)
 
         #------ MIPI BRIGE & CAMERA RESET  --
         self.comb += [
@@ -133,7 +137,7 @@ class Camera_D8M(Module, AutoCSR):
 
         #----- RESET RELAY  --	
         self.specials += Instance("RESET_DELAY",
-            i_iRST = btn_pads[0],
+            i_iRST = btn_pads[0]& self.test.fields.Update,
             i_iCLK = sys_clk,
             o_oRST_0 = dly_rst_0,
             o_oRST_1 = dly_rst_1,
@@ -168,7 +172,7 @@ class Camera_D8M(Module, AutoCSR):
         self.specials += Instance("Sdram_Control",
             # Host Side
             i_CLK = sdram_ctrl_clk,
-            i_RESET_N = btn_pads[0],
+            i_RESET_N = btn_pads[0]& self.test.fields.Update,
             # FIFO write side
             i_WR_DATA = Cat(lut_mipi_pixel_d,0,0,0,0,0,0),
             i_WR = lut_mipi_pixel_hs&lut_mipi_pixel_vs,
@@ -270,7 +274,36 @@ class Camera_D8M(Module, AutoCSR):
             o_READY = ready,
             o_SCL = camera_i2c_scl_af,
             io_SDA = sensor_pads.mipi_sda
-        )    
+        )
+
+        #------VS FREQUENCY TEST = 60HZ --
+        self.specials += Instance("FpsMonitor",
+            i_clk50 = sys_clk,
+            i_vs = lut_mipi_pixel_vs,
+            o_hex_fps_h = platform.request("seven_seg",1),
+            o_hex_fps_l = platform.request("seven_seg",0)
+        )
+
+        #--LED DISPLAY--
+        self.specials += Instance("CLOCKMEM",
+            i_CLK = vga_ctrl_clk,
+            i_CLK_FREQ = 25000000,
+            o_CK_1HZ = d8m_ck_hz,
+        )
+
+        self.specials += Instance("CLOCKMEM",
+            i_CLK = mipi_refclk,
+            i_CLK_FREQ = 20000000,
+            o_CK_1HZ = d8m_ck_hz2,
+        )
+
+        self.specials += Instance("CLOCKMEM",
+            i_CLK = mipi_pixel_clk_,
+            i_CLK_FREQ = 25000000,
+            o_CK_1HZ = d8m_ck_hz3,
+        )
+
+        self.comb += led_pads.eq( Cat(mipi_bridge_release,camera_mipi_release,0,0,0,0,0,d8m_ck_hz3,d8m_ck_hz2,d8m_ck_hz) )
 
         platform.add_source_dir(path="../Camera/")
 

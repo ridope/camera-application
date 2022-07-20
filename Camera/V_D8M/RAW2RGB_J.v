@@ -3,7 +3,8 @@ module RAW2RGB_J(
 //---ccd 
 input	  [9:0]	 iDATA,
 input			    RST,
-input           VGA_CLK, 
+input           VGA_CLK,
+input   [15:0]  LINE_MAX, 
 input           READ_Request ,
 input           VGA_VS ,	
 input           VGA_HS ,	 
@@ -13,8 +14,8 @@ output	[7:0] oBlue,
 output         oDVAL
 
 );
-parameter D8M_VAL_LINE_MAX  = 637; 
-parameter D8M_VAL_LINE_MIN  = 3; 
+parameter D8M_VAL_LINE_MAX  = 640; 
+parameter D8M_VAL_LINE_MIN  = 0; 
 
 //----- WIRE /REG 
 wire	   [9:0]	mDAT0_0;
@@ -60,7 +61,7 @@ Line_Buffer_J 	u0	(
 	
 
 reg    RD_EN ; 
-always @( posedge VGA_CLK  )  RD_EN <= (( mX_Cont > D8M_VAL_LINE_MIN ) && (mX_Cont < D8M_VAL_LINE_MAX ))?1:0 ; 		
+always @( posedge VGA_CLK  )  RD_EN <= (( mX_Cont > D8M_VAL_LINE_MIN ) && (mX_Cont < LINE_MAX-D8M_VAL_LINE_MIN ))?1:0 ; 		
 						
 RAW_RGB_BIN  bin(
       .CLK  ( VGA_CLK ), 

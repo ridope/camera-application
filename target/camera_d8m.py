@@ -17,7 +17,7 @@ class Camera_D8M(Module, AutoCSR):
         self.input = CSRStorage(fields=[
             CSRField("Trigger",  size=1, description="Triggers the sensor to start/stop the capture.", pulse=True),
             CSRField("Reset", size=1, description="Resets the sensor.", reset=1, pulse=True),
-            CSRField("Exposure", size=16, description="Sensor exposure", reset=1000),
+            CSRField("Exposure", size=16, description="Sensor exposure", reset=11264),
         ])
 
         self.control = CSRStorage(fields=[
@@ -40,6 +40,11 @@ class Camera_D8M(Module, AutoCSR):
             CSRField("H", size=16, description="VGA Video Height", reset=480),
         ])
 
+        self.cam = CSRStatus(fields=[
+            CSRField("avg",  size=8, description="8 bits of whole image average output"),
+        ])
+
+        self.clock_domains.cd_pixclk = ClockDomain()
         sys_clk = ClockSignal("sys")
         mipi_refclk = ClockSignal("d8m")
         vga_clk = ClockSignal("vga")
@@ -95,6 +100,9 @@ class Camera_D8M(Module, AutoCSR):
         lut_mipi_pixel_d = Signal(10)
         mipi_pixel_clk_ = Signal()
 
+        pre_lut_mipi_pixel_hs = Signal()
+        pre_lut_mipi_pixel_vs = Signal()
+
         #=======================================================
         # Structural coding
         #=======================================================
@@ -110,7 +118,8 @@ class Camera_D8M(Module, AutoCSR):
             lut_mipi_pixel_hs.eq(sensor_pads.mipi_hs),
             lut_mipi_pixel_vs.eq(sensor_pads.mipi_vs),
             lut_mipi_pixel_d.eq(sensor_pads.mipi_d),
-            sensor_pads.mipi_ref_clk.eq(mipi_refclk)
+            sensor_pads.mipi_ref_clk.eq(mipi_refclk),
+            self.cd_pixclk.clk.eq(~mipi_pixel_clk_)
         ]
 
         self.comb += sdram_clock_pad.eq(sdram_clk_ps)
@@ -157,11 +166,15 @@ class Camera_D8M(Module, AutoCSR):
             o_CAMERA_I2C_RELAESE = camera_mipi_release,
             i_TEST_REG = self.test.fields.Pattern,
             i_WSIZE_REG = self.control.fields.WSize,
-            i_HSIZE_REG = self.control.fields.HSize,      
+            i_HSIZE_REG = self.control.fields.HSize,
+            i_EXPO_REG = self.input.fields.Exposure,
+            o_AVG_REG = self.cam.fields.avg      
         )
 
-        self.comb += [
-            If(lut_mipi_pixel_hs == 0 and lut_mipi_pixel_vs==0,
+        self.sync.pixclk += [
+            pre_lut_mipi_pixel_vs.eq(lut_mipi_pixel_vs),
+
+            If((pre_lut_mipi_pixel_vs == 1) & (lut_mipi_pixel_vs == 0),
                 framenew_capture.eq(1)
             ).Else(
                 framenew_capture.eq(0)
@@ -179,7 +192,7 @@ class Camera_D8M(Module, AutoCSR):
             i_WR_ADDR = 0,
             i_WR_MAX_ADDR = 640*480,
             i_WR_LENGTH = self.sram.fields.WR_L,
-            i_WR_LOAD = ~dly_rst_0,#framenew_capture,
+            i_WR_LOAD = framenew_capture, #~dly_rst_0,
             i_WR_CLK = mipi_pixel_clk_,
             # FIFO read side
             o_RD_DATA = sdram_rd_data,
@@ -187,7 +200,7 @@ class Camera_D8M(Module, AutoCSR):
             i_RD_ADDR = 0,
             i_RD_MAX_ADDR = 640*480,
             i_RD_LENGTH = self.sram.fields.RD_L,
-            i_RD_LOAD = ~dly_rst_1,#self.framedone_vga,
+            i_RD_LOAD = self.framedone_vga, #~dly_rst_1,
             i_RD_CLK = vga_ctrl_clk,
             # SDRAM side
             o_SA = sdram_pads.a,
@@ -205,7 +218,7 @@ class Camera_D8M(Module, AutoCSR):
         self.specials += Instance("RAW2RGB_J",
             i_RST = lut_mipi_pixel_vs,
             i_iDATA = sdram_rd_data,
-
+            i_LINE_MAX = self.control.fields.WSize,
             i_VGA_CLK = vga_ctrl_clk,
             i_READ_Request = read_request,
             i_VGA_HS = vga_pads.hsync_n,
@@ -226,8 +239,8 @@ class Camera_D8M(Module, AutoCSR):
             i_iBlue = blue,
 
             o_oFrameDone = self.framedone_vga,            
-            #i_iVideo_W = self.vga.fields.W,
-            #i_iVideo_H = self.vga.fields.H,
+            i_iVideo_W = self.vga.fields.W,
+            i_iVideo_H = self.vga.fields.H,
 
             # VGA side
             o_oVGA_R = r_auto,
@@ -310,13 +323,21 @@ class Camera_D8M(Module, AutoCSR):
 
         platform.toolchain.additional_sdc_commands = [
             "create_generated_clock -name sdram_clk -source [get_pins {ALTPLL|auto_generated|pll1|clk[2]}] [get_ports {sdram_clock}]",
+            "create_generated_clock -name clk_vga_ext -source [get_pins {ALTPLL|auto_generated|pll1|clk[3]}] -invert",
+            "create_clock -name MIPI_PIXEL_CLK -period 40 [get_ports {d8m_mipi_clk}]",
+            "create_clock -name MIPI_PIXEL_CLK_ext -period 40",
             "derive_pll_clocks",
             "derive_clock_uncertainty",
             "set_input_delay -max -clock sdram_clk 5.9 [get_ports sdram_dq*]",
             "set_input_delay -min -clock sdram_clk 3.0 [get_ports sdram_dq*]",
             "set_multicycle_path -from [get_clocks {sdram_clk}] -to [get_clocks {ALTPLL|auto_generated|pll1|clk[1]}] -setup 2",
+            "set_input_delay -clock { MIPI_PIXEL_CLK_ext } -max 6.1 [get_ports {d8m_mipi_hs d8m_mipi_vs d8m_mipi_d[*]}]",
+            "set_input_delay -clock { MIPI_PIXEL_CLK_ext } -min 0.9 [get_ports {d8m_mipi_hs d8m_mipi_vs d8m_mipi_d[*]}]",
             "set_output_delay -max -clock sdram_clk 1.6  [get_ports {sdram_dq* sdram_dm*}]",
             "set_output_delay -min -clock sdram_clk -0.9 [get_ports {sdram_dq* sdram_dm*}]",
             "set_output_delay -max -clock sdram_clk 1.6  [get_ports {sdram_a* sdram_ba* sdram_ras_n sdram_cas_n sdram_we_n sdram_cke sdram_cs_n}]",
-            "set_output_delay -min -clock sdram_clk -0.9 [get_ports {sdram_a* sdram_ba* sdram_ras_n sdram_cas_n sdram_we_n sdram_cke sdram_cs_n}]"
+            "set_output_delay -min -clock sdram_clk -0.9 [get_ports {sdram_a* sdram_ba* sdram_ras_n sdram_cas_n sdram_we_n sdram_cke sdram_cs_n}]",
+            "set_output_delay -clock { clk_vga_ext } -max 0.3 [get_ports {vga_r[*] vga_g[*] vga_b[*]}]",
+            "set_output_delay -clock { clk_vga_ext }  [get_ports {vga_r[*] vga_g[*] vga_b[*]}]",
+            "set_clock_groups -asynchronous -group [get_clocks {MIPI_PIXEL_CLK}]"
         ]

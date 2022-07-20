@@ -7,6 +7,8 @@ module MIPI_CAMERA_CONFIG  (
    input [7:0] TEST_REG, 
    input [15:0] WSIZE_REG,
    input [15:0] HSIZE_REG,
+   input [15:0] EXPO_REG,
+   output [7:0] AVG_REG,
 	
    output  I2C_SCL, 
    inout   I2C_SDA,
@@ -54,7 +56,7 @@ wire [13:0] BB;
 //B_GAIN b2( . result ( BB ))  ; //400
 
 
-parameter     WORD_NUM_MAX = 304; //294;// 317 	 ;  
+parameter     WORD_NUM_MAX = 307; //294;// 317 	 ;  
 
 //-- I2C clock 400k generater 
 CLOCKMEM c1(  .CLK ( CLK_50 ) , .CLK_FREQ ( 125 )  , .CK_1HZ (CLK_400K) ) ; 
@@ -157,6 +159,8 @@ end
 	  WCNT<=0 ; 
     end	
 31: begin 
+      I2C_LO0P <= 0 ; 
+      MIPI_CAMERA_RELAESE <=0 ;  
       if  ( SLV8_REG16_DATA8[31:24] == DELAY_TYPE  )  ST <= 40 ;     
 		else  begin 
 	      { SLAVE_ADDR[7:0] , POINTER [15:0] ,WORD_DATA [7:0]} <=  SLV8_REG16_DATA8  ; 
@@ -183,7 +187,8 @@ end
 35: begin 
         if  (  WCNT == WORD_NUM_MAX )    //13
 		  begin   
-		       ST<= ST ; 	 
+		       ST<= 42 ; 	 
+             WCNT <= 304;
 		       I2C_LO0P <= 1 ;  
 				 MIPI_CAMERA_RELAESE <=1 ;  
 			  end 
@@ -462,10 +467,10 @@ case ( WCNT )
    134	 :SLV8_REG16_DATA8<= { 8'h6c,16'h37b7, 8'h00};
    135	 :SLV8_REG16_DATA8<= { 8'h6c,16'h37b8, 8'h00};
    136	 :SLV8_REG16_DATA8<= { 8'h6c,16'h37b9, 8'hff}; // sensor control // 640x480
-   137	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3808, 8'h02}; // X output size H. 0x02
-   138	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3809, 8'h80}; // X output size L. 0x80
-   139	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380a, 8'h01}; // Y output size H. 0x01
-   140	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380b, 8'hE0}; // Y output size L. 0xE0 // 60 fps (combined with pll settings)
+   137	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3808, WSIZE_REG[15:8]}; // X output size H. 0x02
+   138	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3809, WSIZE_REG[7:0]}; // X output size L. 0x80
+   139	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380a, HSIZE_REG[15:8]}; // Y output size H. 0x01
+   140	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380b, HSIZE_REG[7:0]}; // Y output size L. 0xE0 // 60 fps (combined with pll settings)
    141	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380c, 8'h12}; // HTS H. 0x12
    142	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380d, 8'h00}; // HTS L. 0x00
    143	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380e, 8'h02}; // VTS H. 0x02
@@ -632,6 +637,9 @@ case ( WCNT )
    301	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5687, 8'hE0}; // Window_H_avg L
    302	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5688, 8'h02}; // Window_H_avg L
    303	 :SLV8_REG16_DATA8<= { 8'h6c,16'h0100, 8'h01}; //; wake up, streaming
+   304	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3501, EXPO_REG[15:8]}; // exposure H
+   305	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3502, EXPO_REG[7:0]}; // exposure L
+   306	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5e00, TEST_REG}; // test pattern off
 	//     {END_OF_SCRIPT, 0, 0}
    endcase 
 end 	

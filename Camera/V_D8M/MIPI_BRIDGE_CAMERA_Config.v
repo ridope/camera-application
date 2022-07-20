@@ -14,7 +14,9 @@ module MIPI_BRIDGE_CAMERA_Config   (
 
  input [7:0] TEST_REG,
  input [15:0] WSIZE_REG,
- input [15:0] HSIZE_REG
+ input [15:0] HSIZE_REG,
+ input [15:0] EXPO_REG,
+ output [7:0] AVG_REG
 
  ); 
  
@@ -50,6 +52,8 @@ MIPI_CAMERA_CONFIG  camiv(
    .TEST_REG(TEST_REG),
    .WSIZE_REG(WSIZE_REG),
    .HSIZE_REG(HSIZE_REG),
+   .EXPO_REG(EXPO_REG),
+   .AVG_REG(AVG_REG)
 );
 
 wire CLK_400K ; 

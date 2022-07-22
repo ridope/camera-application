@@ -16,6 +16,6 @@ else if (PULSE < 32'hfffffff0)
 end 
 
 //--- AUTO_FOC ON ---
-assign AUTO_FOC = (PULSE < 100000000)?0 : 1 ;  
+assign AUTO_FOC = (PULSE < 50)?0 : 1 ;  
 
 endmodule 

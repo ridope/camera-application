@@ -56,7 +56,7 @@ wire [13:0] BB;
 //B_GAIN b2( . result ( BB ))  ; //400
 
 
-parameter     WORD_NUM_MAX = 307; //294;// 317 	 ;  
+parameter     WORD_NUM_MAX = 312; //294;// 317 	 ;  
 
 //-- I2C clock 400k generater 
 CLOCKMEM c1(  .CLK ( CLK_50 ) , .CLK_FREQ ( 125 )  , .CK_1HZ (CLK_400K) ) ; 
@@ -185,10 +185,10 @@ end
 	  end
 	end              
 35: begin 
-        if  (  WCNT == WORD_NUM_MAX )    //13
+        if  (  WCNT == WORD_NUM_MAX-1)    //13
 		  begin   
-		       ST<= 42 ; 	 
-             WCNT <= 304;
+		       ST<= 40 ; 	 
+             WCNT <= 303;
 		       I2C_LO0P <= 1 ;  
 				 MIPI_CAMERA_RELAESE <=1 ;  
 			  end 
@@ -640,6 +640,11 @@ case ( WCNT )
    304	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3501, EXPO_REG[15:8]}; // exposure H
    305	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3502, EXPO_REG[7:0]}; // exposure L
    306	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5e00, TEST_REG}; // test pattern off
+   307	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3808, WSIZE_REG[15:8]}; // X output size H. 0x02
+   308	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3809, WSIZE_REG[7:0]}; // X output size L. 0x80
+   309	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380a, HSIZE_REG[15:8]}; // Y output size H. 0x01
+   310	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380b, HSIZE_REG[7:0]}; // Y output size L. 0xE0 // 60 fps (combined with pll settings)
+   311	 :SLV8_REG16_DATA8<= { TIME_DELAY, 16'h0, 8'hFF};
 	//     {END_OF_SCRIPT, 0, 0}
    endcase 
 end 	

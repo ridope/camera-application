@@ -104,28 +104,28 @@ VCM_I2C i2c2(
    .I2C_SCL    ( SCL    ) ,
    .I2C_SDA    ( SDA    ),
    .VCM_DATA   ( VCM_DATA  ), 
-	.TEST_MODE  ( 1 )//1: WRITE-READ-WRITE-  , 0: write only
+	.TEST_MODE  ( 0 )//1: WRITE-READ-WRITE-  , 0: write only
 	);
 	 
 //-----VIDEO MIXED  -- 
 
 always @( negedge VIDEO_CLK ) 
-   // {oR, oG, oB}  <=    
-   // ((SW_FUC_LINE &  LINE )  ||  ( SW_FUC_ALL_CEN  &  ( ~VCM_END  &  LINE) ) )?  {8'hF, 8'hF, 8'h0} : 
-   // ( !SW_Y )?  //( ACTIV_C ? 24'h555555 :  
-	// { iR, iG, iB }   : 
-   // (SW_H_FREQ)?  { 
-   //   Y[15:12 ],
-   //   Y[15:12 ],
-   //   Y[15:12 ]
-   // } :
-   // {
-	//    S[7:4],
-	//    S[7:4],
-	//    S[7:4]
-	//  };
+   {oR[3:0], oG[3:0], oB[3:0]}  <=    
+   ((SW_FUC_LINE &  LINE )  ||  ( SW_FUC_ALL_CEN  &  ( ~VCM_END  &  LINE) ) )?  {4'hF, 4'hF, 4'h0} : 
+   ( !SW_Y )?  //( ACTIV_C ? 24'h555555 :  
+	{ iR[7:4], iG[7:4], iB[7:4]}   : 
+   (SW_H_FREQ)?  { 
+     Y[15:12 ],
+     Y[15:12 ],
+     Y[15:12 ]
+   } :
+   {
+	   S[7:4],
+	   S[7:4],
+	   S[7:4]
+	 };
 
-   {oR[3:0], oG[3:0], oB[3:0]}  <=  { iR[7:4], iG[7:4], iB[7:4]} ;
+   //{oR[3:0], oG[3:0], oB[3:0]}  <=  { iR[7:4], iG[7:4], iB[7:4]} ;
 	 
 endmodule 
 	 

@@ -127,7 +127,7 @@ static void set_size(void){
 	printf("Col size: %d\n", camera.col_size);
 	printf("Row start: %d\n", camera.row_start);
 	printf("Col start: %d\n", camera.col_start);
-	camera_test_update_write(0);
+	//camera_test_update_write(0);
 }
 
 static void set_start(void){

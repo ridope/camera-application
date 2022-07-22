@@ -26,7 +26,7 @@ class Camera_D8M(Module, AutoCSR):
         ])
 
         self.test = CSRStorage(fields=[
-            CSRField("Pattern", size=8, description="Test Pattern Register", reset=146),
+            CSRField("Pattern", size=8, description="Test Pattern Register", reset=0),
             CSRField("Update", size=1, description="Triggers flag to update camera", reset=1, pulse=True),
         ])
 
@@ -45,6 +45,7 @@ class Camera_D8M(Module, AutoCSR):
         ])
 
         self.clock_domains.cd_pixclk = ClockDomain()
+        self.clock_domains.cd_vga_ctrl_clk = ClockDomain()
         sys_clk = ClockSignal("sys")
         mipi_refclk = ClockSignal("d8m")
         vga_clk = ClockSignal("vga")
@@ -60,7 +61,7 @@ class Camera_D8M(Module, AutoCSR):
         sdram_pads = platform.request("sdram")
         sensor_pads = platform.request("d8m")
 
-        self.framedone_vga = Signal()
+        framedone_vga = Signal()
         framenew_capture = Signal()
 
         sdram_rd_data = Signal(16)
@@ -87,6 +88,7 @@ class Camera_D8M(Module, AutoCSR):
         g_auto = Signal(8)
         r_auto = Signal(8)
         reset_n = Signal()
+        vga_blank = Signal()
 
         i2c_release = Signal()
         auto_foc = Signal()
@@ -103,6 +105,11 @@ class Camera_D8M(Module, AutoCSR):
         pre_lut_mipi_pixel_hs = Signal()
         pre_lut_mipi_pixel_vs = Signal()
 
+        trigger_start = Signal()
+        self.pixel_o = Signal(8)
+        self.pvalid = Signal()
+        self.trigger_end = Signal()
+
         #=======================================================
         # Structural coding
         #=======================================================
@@ -114,12 +121,17 @@ class Camera_D8M(Module, AutoCSR):
             o_oCLK = mipi_pixel_clk_
         )
 
+        self.submodules.trigstart = BlindTransfer("sys", "vga_ctrl_clk")
+        self.comb += [self.trigstart.i.eq(self.input.fields.Trigger), trigger_start.eq(self.trigstart.o)]
+
+
         self.comb += [
             lut_mipi_pixel_hs.eq(sensor_pads.mipi_hs),
             lut_mipi_pixel_vs.eq(sensor_pads.mipi_vs),
             lut_mipi_pixel_d.eq(sensor_pads.mipi_d),
             sensor_pads.mipi_ref_clk.eq(mipi_refclk),
-            self.cd_pixclk.clk.eq(~mipi_pixel_clk_)
+            self.cd_pixclk.clk.eq(~mipi_pixel_clk_),
+            self.cd_vga_ctrl_clk.clk.eq(vga_ctrl_clk)
         ]
 
         self.comb += sdram_clock_pad.eq(sdram_clk_ps)
@@ -200,7 +212,7 @@ class Camera_D8M(Module, AutoCSR):
             i_RD_ADDR = 0,
             i_RD_MAX_ADDR = 640*480,
             i_RD_LENGTH = self.sram.fields.RD_L,
-            i_RD_LOAD = self.framedone_vga, #~dly_rst_1,
+            i_RD_LOAD = framedone_vga, #~dly_rst_1,
             i_RD_CLK = vga_ctrl_clk,
             # SDRAM side
             o_SA = sdram_pads.a,
@@ -238,7 +250,7 @@ class Camera_D8M(Module, AutoCSR):
             i_iGreen = green,
             i_iBlue = blue,
 
-            o_oFrameDone = self.framedone_vga,            
+            o_oFrameDone = framedone_vga,            
             i_iVideo_W = self.vga.fields.W,
             i_iVideo_H = self.vga.fields.H,
 
@@ -248,12 +260,54 @@ class Camera_D8M(Module, AutoCSR):
             o_oVGA_B = b_auto,
             o_oVGA_H_SYNC = vga_pads.hsync_n,
             o_oVGA_V_SYNC = vga_pads.vsync_n,
+            o_oVGA_BLANK  = vga_blank,
 
             # Control signal
             i_iCLK = vga_ctrl_clk,
             i_iRST_N = dly_rst_2,
             o_H_Cont = vga_h_cnt,
             o_V_Cont = vga_v_cnt
+        )
+
+        #self.comb += trigger_end.eq(framedone_vga)
+
+
+        fsm = ClockDomainsRenamer("vga_ctrl_clk")( FSM(reset_state="START") ) 
+        self.submodules += fsm
+
+        fsm.act("START",
+            If(trigger_start == 1,
+                NextState("WAIT_DONE"),
+                NextValue(self.trigger_end, 0),
+                NextValue(self.pvalid, 0)
+            )
+        )
+
+        fsm.act("WAIT_DONE",
+            If(framedone_vga == 1,
+                NextState("WAIT_START")
+            )
+        )
+
+        fsm.act("WAIT_START",
+            If(read_request == 1,
+                NextState("PIX_OUT")
+            )
+        )
+
+        fsm.act("PIX_OUT",
+
+            If(vga_blank == 1,
+                NextValue(self.pixel_o, r_auto), #VGA output is B&W
+                NextValue(self.pvalid, 1),
+            ).Elif(framedone_vga == 1,
+                NextState("START"),
+                NextValue(self.pvalid, 0),
+                NextValue(self.trigger_end, 1),
+            ).Else(
+                NextValue(self.pvalid, 0),
+            )
+
         )
 
         #------AOTO FOCUS ENABLE  --
@@ -268,7 +322,7 @@ class Camera_D8M(Module, AutoCSR):
             i_CLK_50 = sys_clk,
             i_RESET_N = i2c_release,
             i_RESET_SUB_N = i2c_release,
-            i_AUTO_FOC = btn_pads[1]&auto_foc,
+            i_AUTO_FOC = ~btn_pads[1]&auto_foc,
             i_SW_Y = 0,
             i_SW_H_FREQ = 0,
             i_SW_FUC_LINE = sw_pads[3],
@@ -338,6 +392,6 @@ class Camera_D8M(Module, AutoCSR):
             "set_output_delay -max -clock sdram_clk 1.6  [get_ports {sdram_a* sdram_ba* sdram_ras_n sdram_cas_n sdram_we_n sdram_cke sdram_cs_n}]",
             "set_output_delay -min -clock sdram_clk -0.9 [get_ports {sdram_a* sdram_ba* sdram_ras_n sdram_cas_n sdram_we_n sdram_cke sdram_cs_n}]",
             "set_output_delay -clock { clk_vga_ext } -max 0.3 [get_ports {vga_r[*] vga_g[*] vga_b[*]}]",
-            "set_output_delay -clock { clk_vga_ext }  [get_ports {vga_r[*] vga_g[*] vga_b[*]}]",
+            "set_output_delay -clock { clk_vga_ext } -min -1.6 [get_ports {vga_r[*] vga_g[*] vga_b[*]}]",
             "set_clock_groups -asynchronous -group [get_clocks {MIPI_PIXEL_CLK}]"
         ]

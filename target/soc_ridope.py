@@ -72,7 +72,7 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         kwargs["integrated_rom_size"] = 0x8000 # chose rom size, holding bootloader (min = 0x6000)
         kwargs["integrated_sram_size"] = 0x8000 # chose sram size, holding stack and heap. (min = 0x6000)
         kwargs["integrated_main_ram_size"] = 0x10000 # 0 means external RAM is used, non 0 allocates main RAM internally
-        kwargs["uart_name"] = "arduino_serial"
+        kwargs["uart_name"] = "crossover+uartbone"
 
         platform.add_extension([("d8m", 0,
                         Subsignal("mipi_d", Pins(
@@ -95,6 +95,11 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
                         IOStandard("3.3-V LVTTL")
                     )])
 
+        platform.add_extension([("serial2", 0,
+                                    Subsignal("tx", Pins("AB20"), IOStandard("3.3-V LVTTL")), # Arduino IO11
+                                    Subsignal("rx", Pins("F16"), IOStandard("3.3-V LVTTL"))  # Arduino IO12
+                                ),])
+
         platform.add_extension([("arduino_serial", 0,
                                     Subsignal("tx", Pins("AA19"), IOStandard("3.3-V LVTTL")), # Arduino IO11
                                     Subsignal("rx", Pins("Y19"), IOStandard("3.3-V LVTTL"))  # Arduino IO12
@@ -102,6 +107,7 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         
         SoCCore.__init__(self, platform, sys_clk_freq,
             ident          = "LiteX SoC on DE10-Lite",
+            cpu_variant    = "standard+debug",
             **kwargs)
 
         self.submodules.crg = _CRG(platform, sys_clk_freq) # CRG instanciation   
@@ -145,6 +151,7 @@ def main(): # Instanciating the SoC and options
     parser.add_argument("--build",               action="store_true", help="Build bitstream")
     parser.add_argument("--load",                action="store_true", help="Load bitstream")
     parser.add_argument("--sys-clk-freq",        default=50e6,        help="System clock frequency (default: 50MHz)")
+    parser.add_argument("--csr_csv",            default="csr.csv",    help="Write SoC mapping to the specified CSV file.")
     parser.add_argument("--with-video-terminal", action="store_true", help="Enable Video Terminal (VGA)")
     builder_args(parser)
     soc_core_args(parser)
@@ -156,6 +163,7 @@ def main(): # Instanciating the SoC and options
         
         **soc_core_argdict(args)
     )
+
     builder = Builder(soc, **builder_argdict(args))
     builder.build(run=args.build)
     soc.do_exit(builder)

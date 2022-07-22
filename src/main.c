@@ -81,7 +81,7 @@ static void help(void)
 	puts("len				- Sets the SDRAM RD/WR length");
 	puts("vga				- Sets the VGA output");
 	puts("test		        - Sets the test pattern resgister");
-	puts("get				- Gets the counter from logic");
+	puts("get				- Gets the image from logic");
 }
 
 static void trigger_camera(void){
@@ -260,8 +260,12 @@ static void set_test(void){
 	//camera_test_update_write(0);
 }
 
-static void get_counter(void){
-	printf("\e[94;1mCounter\e[0m> %d\n", COUNTER_DRIVER->data);
+static void get_img(void){
+	camera_input_trigger_write(1);
+
+	while(!camera_cam_capture_done_read());
+
+	comm_ridope_send_img(&(IMG_DRIVER->data[0]),TRANS_PHOTO, IMG_WIDTH, IMG_HEIGTH);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -302,7 +306,7 @@ static void console_service(void)
 	else if(strcmp(token, "start") == 0)
 		set_start();
 	else if(strcmp(token, "get") == 0)
-		get_counter();
+		get_img();
 	else if(strcmp(token, "len") == 0)
 		set_length();
 	else if(strcmp(token, "vga") == 0)

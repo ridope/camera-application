@@ -12,6 +12,7 @@
 #include <generated/csr.h>
 
 #include <generated/mem.h>
+#include "comm_ridope.h"
 
 typedef struct  {
     uint32_t trigger;
@@ -19,9 +20,12 @@ typedef struct  {
     uint16_t status;
 } SPERIPH_TypeDef;
 
+#define IMG_WIDTH 32
+#define IMG_HEIGTH 32
+
 typedef struct {
-    uint16_t data;
-} COUNTER_TypeDef;
+    uint8_t data[IMG_WIDTH*IMG_HEIGTH];
+} Img_TypeDef;
 
 typedef struct {
     uint16_t row_size;
@@ -31,6 +35,6 @@ typedef struct {
 } D5M_CONTROL_TypeDef;
 
 #define SPERIPH_DRIVER      ((SPERIPH_TypeDef *)        CSR_CAMERA_BASE)
-#define COUNTER_DRIVER      ((COUNTER_TypeDef *)        LOGIC_MEMORY_BASE)
+#define IMG_DRIVER      ((Img_TypeDef *)        LOGIC_MEMORY_BASE)
 
 #endif

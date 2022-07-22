@@ -8,6 +8,7 @@ EXT_LIBDIR = ../ext_lib
 
 OBJECTS := $(OBJDIR)/isr.o \
 		$(OBJDIR)/main.o \
+		$(OBJDIR)/comm_ridope.o \
 		$(OBJDIR)/crt0.o
 
 all: demo.bin

@@ -42,6 +42,7 @@ class Camera_D8M(Module, AutoCSR):
 
         self.cam = CSRStatus(fields=[
             CSRField("avg",  size=8, description="8 bits of whole image average output"),
+            CSRField("capture_done",  size=8, description="Status of the triggered capture"),
         ])
 
         self.clock_domains.cd_pixclk = ClockDomain()
@@ -275,11 +276,13 @@ class Camera_D8M(Module, AutoCSR):
         fsm = ClockDomainsRenamer("vga_ctrl_clk")( FSM(reset_state="START") ) 
         self.submodules += fsm
 
+        self.comb += self.cam.fields.capture_done.eq(self.trigger_end)
+
         fsm.act("START",
             If(trigger_start == 1,
                 NextState("WAIT_DONE"),
                 NextValue(self.trigger_end, 0),
-                NextValue(self.pvalid, 0)
+                NextValue(self.pvalid, 0),
             )
         )
 
@@ -303,7 +306,7 @@ class Camera_D8M(Module, AutoCSR):
             ).Elif(framedone_vga == 1,
                 NextState("START"),
                 NextValue(self.pvalid, 0),
-                NextValue(self.trigger_end, 1),
+                NextValue(self.trigger_end, 1)
             ).Else(
                 NextValue(self.pvalid, 0),
             )

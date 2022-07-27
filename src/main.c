@@ -228,19 +228,20 @@ static void set_vga(void){
 }
 
 
-static void set_exposure(void){
-	char *str;
-	char *exposure_str;
+static void set_exposure(uint32_t expo){
+	// char *str;
+	// char *exposure_str;
 
-	printf("\e[94;1mInsert the exposure\e[0m> ");
-	do 
-	{
-		str = readstr();
-	}while(str == NULL);
+	// printf("\e[94;1mInsert the exposure\e[0m> ");
+	// do 
+	// {
+	// 	str = readstr();
+	// }while(str == NULL);
 
-	exposure_str = get_token(&str);
+	// exposure_str = get_token(&str);
 	
-	camera_input_exposure_write(atoi(exposure_str));
+	//camera_input_exposure_write(atoi(exposure_str));
+	camera_input_exposure_write(expo);
 	//camera_test_update_write(0);
 }
 
@@ -261,11 +262,37 @@ static void set_test(void){
 }
 
 static void get_img(void){
+	printf("Got it!\n");
 	camera_input_trigger_write(1);
 
-	while(!camera_cam_capture_done_read());
+	
+	printf("Sending img!\n");
 
 	comm_ridope_send_img(&(IMG_DRIVER->data[0]),TRANS_PHOTO, IMG_WIDTH, IMG_HEIGTH);
+	printf("Done sending!\n");
+}
+
+static void init_cam(){
+	D5M_CONTROL_TypeDef camera;
+
+	/* No test pattern */
+	camera_test_pattern_write(0);
+
+	/* VGA output size: 32x32 pixels */
+	camera_vga_w_write(32);
+	camera_vga_h_write(32);
+
+	/* Exposure : 1000 */
+	//camera_input_exposure_write(3000);
+	
+	/* Camera output size: 32x32 pixels */
+	uint64_t *reg = (uint64_t *) &camera;
+	*reg = camera_control_read();
+
+	camera.row_size = 32;
+	camera.col_size = 32;
+
+	camera_control_write(*reg);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -298,7 +325,7 @@ static void console_service(void)
 	else if(strcmp(token, "reset") == 0)
 		reset_camera();
 	else if(strcmp(token, "expo") == 0)
-		set_exposure();
+		set_exposure(2500);
 	else if(strcmp(token, "test") == 0)
 		set_test();
 	else if(strcmp(token, "size") == 0)
@@ -327,8 +354,21 @@ int main(void)
 	help();
 	prompt();
 
+	init_cam();
+
+	COMM_RIDOPE_MSG_t rx_msg;
+
 	while(1) {
-		console_service();
+		comm_ridope_receive_cmd(&rx_msg);
+
+
+		if(rx_msg.msg_data.cmd == CAMERA_TRIG)
+		{
+			get_img();
+		}else if(rx_msg.msg_data.cmd == CAMERA_EXPO)
+		{
+			set_exposure(crealf(rx_msg.msg_data.data));
+		}
 	}
 
 	return 0;

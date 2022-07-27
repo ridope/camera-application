@@ -62,7 +62,7 @@ class Camera_D8M(Module, AutoCSR):
         sdram_pads = platform.request("sdram")
         sensor_pads = platform.request("d8m")
 
-        framedone_vga = Signal()
+        self.framedone_vga = Signal()
         framenew_capture = Signal()
 
         sdram_rd_data = Signal(16)
@@ -84,12 +84,14 @@ class Camera_D8M(Module, AutoCSR):
         vga_v_cnt = Signal(13)
         sram_write = Signal()
 
-        read_request = Signal()
+        self.read_request = Signal()
         b_auto = Signal(8)
         g_auto = Signal(8)
         r_auto = Signal(8)
         reset_n = Signal()
         vga_blank = Signal()
+        self.vga_blank_out = Signal()
+        self.pvalid = Signal()
 
         i2c_release = Signal()
         auto_foc = Signal()
@@ -108,8 +110,6 @@ class Camera_D8M(Module, AutoCSR):
 
         trigger_start = Signal()
         self.pixel_o = Signal(8)
-        self.pvalid = Signal()
-        self.trigger_end = Signal()
 
         #=======================================================
         # Structural coding
@@ -132,7 +132,8 @@ class Camera_D8M(Module, AutoCSR):
             lut_mipi_pixel_d.eq(sensor_pads.mipi_d),
             sensor_pads.mipi_ref_clk.eq(mipi_refclk),
             self.cd_pixclk.clk.eq(~mipi_pixel_clk_),
-            self.cd_vga_ctrl_clk.clk.eq(vga_ctrl_clk)
+            self.cd_vga_ctrl_clk.clk.eq(vga_ctrl_clk),
+            self.vga_blank_out.eq(~vga_blank)
         ]
 
         self.comb += sdram_clock_pad.eq(sdram_clk_ps)
@@ -209,11 +210,11 @@ class Camera_D8M(Module, AutoCSR):
             i_WR_CLK = mipi_pixel_clk_,
             # FIFO read side
             o_RD_DATA = sdram_rd_data,
-            i_RD = read_request,
+            i_RD = self.read_request,
             i_RD_ADDR = 0,
             i_RD_MAX_ADDR = 640*480,
             i_RD_LENGTH = self.sram.fields.RD_L,
-            i_RD_LOAD = framedone_vga, #~dly_rst_1,
+            i_RD_LOAD = self.framedone_vga, #~dly_rst_1,
             i_RD_CLK = vga_ctrl_clk,
             # SDRAM side
             o_SA = sdram_pads.a,
@@ -233,25 +234,26 @@ class Camera_D8M(Module, AutoCSR):
             i_iDATA = sdram_rd_data,
             i_LINE_MAX = self.control.fields.WSize,
             i_VGA_CLK = vga_ctrl_clk,
-            i_READ_Request = read_request,
+            i_READ_Request = self.read_request,
             i_VGA_HS = vga_pads.hsync_n,
             i_VGA_VS = vga_pads.vsync_n,
             
             o_oRed = red,
             o_oGreen = green,
             o_oBlue = blue,
-            o_oDVAL = sram_write,
+            o_bw = self.pixel_o,
+            o_oDVAL = self.pvalid,
         )
 
         # VGA Controller module
         self.specials += Instance("VGA_Controller",
             # Host side
-            o_oRequest = read_request,
+            o_oRequest = self.read_request,
             i_iRed = red,
             i_iGreen = green,
             i_iBlue = blue,
 
-            o_oFrameDone = framedone_vga,            
+            o_oFrameDone = self.framedone_vga,            
             i_iVideo_W = self.vga.fields.W,
             i_iVideo_H = self.vga.fields.H,
 
@@ -268,49 +270,6 @@ class Camera_D8M(Module, AutoCSR):
             i_iRST_N = dly_rst_2,
             o_H_Cont = vga_h_cnt,
             o_V_Cont = vga_v_cnt
-        )
-
-        #self.comb += trigger_end.eq(framedone_vga)
-
-
-        fsm = ClockDomainsRenamer("vga_ctrl_clk")( FSM(reset_state="START") ) 
-        self.submodules += fsm
-
-        self.comb += self.cam.fields.capture_done.eq(self.trigger_end)
-
-        fsm.act("START",
-            If(trigger_start == 1,
-                NextState("WAIT_DONE"),
-                NextValue(self.trigger_end, 0),
-                NextValue(self.pvalid, 0),
-            )
-        )
-
-        fsm.act("WAIT_DONE",
-            If(framedone_vga == 1,
-                NextState("WAIT_START")
-            )
-        )
-
-        fsm.act("WAIT_START",
-            If(read_request == 1,
-                NextState("PIX_OUT")
-            )
-        )
-
-        fsm.act("PIX_OUT",
-
-            If(vga_blank == 1,
-                NextValue(self.pixel_o, r_auto), #VGA output is B&W
-                NextValue(self.pvalid, 1),
-            ).Elif(framedone_vga == 1,
-                NextState("START"),
-                NextValue(self.pvalid, 0),
-                NextValue(self.trigger_end, 1)
-            ).Else(
-                NextValue(self.pvalid, 0),
-            )
-
         )
 
         #------AOTO FOCUS ENABLE  --
@@ -333,7 +292,7 @@ class Camera_D8M(Module, AutoCSR):
             i_VIDEO_HS = vga_pads.hsync_n,
             i_VIDEO_VS = vga_pads.vsync_n,
             i_VIDEO_CLK = vga_ctrl_clk,
-            i_VIDEO_DE = read_request,
+            i_VIDEO_DE = self.read_request,
             i_iR = r_auto,
             i_iG = g_auto,
             i_iB = b_auto,

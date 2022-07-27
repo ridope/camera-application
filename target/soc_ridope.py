@@ -59,7 +59,7 @@ class _CRG(Module): # Clock Region definition
 class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
 
     mem_map = {
-      "logic_memory": 0x30000000,  # this just needs to be a unique block
+      "logic_memory": 0x80000000,  # this just needs to be a unique block
     }
     mem_map.update(SoCCore.mem_map)
 
@@ -72,7 +72,7 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         kwargs["integrated_rom_size"] = 0x8000 # chose rom size, holding bootloader (min = 0x6000)
         kwargs["integrated_sram_size"] = 0x8000 # chose sram size, holding stack and heap. (min = 0x6000)
         kwargs["integrated_main_ram_size"] = 0x10000 # 0 means external RAM is used, non 0 allocates main RAM internally
-        kwargs["uart_name"] = "crossover+uartbone"
+        kwargs["uart_name"] = "arduino_serial"
 
         platform.add_extension([("d8m", 0,
                         Subsignal("mipi_d", Pins(
@@ -95,11 +95,6 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
                         IOStandard("3.3-V LVTTL")
                     )])
 
-        platform.add_extension([("serial2", 0,
-                                    Subsignal("tx", Pins("AB20"), IOStandard("3.3-V LVTTL")), # Arduino IO11
-                                    Subsignal("rx", Pins("F16"), IOStandard("3.3-V LVTTL"))  # Arduino IO12
-                                ),])
-
         platform.add_extension([("arduino_serial", 0,
                                     Subsignal("tx", Pins("AA19"), IOStandard("3.3-V LVTTL")), # Arduino IO11
                                     Subsignal("rx", Pins("Y19"), IOStandard("3.3-V LVTTL"))  # Arduino IO12
@@ -107,7 +102,6 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         
         SoCCore.__init__(self, platform, sys_clk_freq,
             ident          = "LiteX SoC on DE10-Lite",
-            cpu_variant    = "standard+debug",
             **kwargs)
 
         self.submodules.crg = _CRG(platform, sys_clk_freq) # CRG instanciation   
@@ -118,7 +112,7 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
 
         # infer the logic block with memory
         memdepth = 32*32
-        data_width = 8
+        data_width = 32
         length = memdepth * data_width//8
         self.submodules.logicmem = MemLogic(data_width,memdepth)
 
@@ -126,7 +120,7 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         # memdepth is the depth of the memory inferred in your logic block
         # the length is in bytes, so for example if the data_width of your memory
         # block is 32 bits, the total length is memdepth * 4
-        self.add_memory_region("logic_memory", self.mem_map["logic_memory"], length, type='cached')
+        self.add_memory_region("logic_memory", self.mem_map["logic_memory"], length, type='io')
 
         self.add_wb_slave(self.mem_map["logic_memory"], self.logicmem.bus)
 
@@ -137,10 +131,10 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
             If(self.camera.pvalid==1,
                 self.logicmem.logic_write_data.eq(self.camera.pixel_o),
                 self.logicmem.local_adr.eq(addr),
-                addr.eq(addr+8)
+                addr.eq(addr+1)
             ),
 
-            If(self.camera.trigger_end==1,
+            If(self.camera.framedone_vga==1,
                 addr.eq(0)
             )
         ]

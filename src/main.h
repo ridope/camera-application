@@ -24,7 +24,7 @@ typedef struct  {
 #define IMG_HEIGTH 32
 
 typedef struct {
-    uint8_t data[IMG_WIDTH*IMG_HEIGTH];
+    uint32_t data[IMG_WIDTH*IMG_HEIGTH];
 } Img_TypeDef;
 
 typedef struct {

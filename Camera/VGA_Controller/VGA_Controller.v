@@ -24,8 +24,8 @@ module	VGA_Controller(
 // REG/WIRE declarations
 //=======================================================
 parameter H_MARK   = 17;//MAX 17
-parameter H_MARK1  = 6;//MAX 10
-parameter V_MARK   = 1; //MAX 1
+parameter H_MARK1  = 10;//MAX 10
+parameter V_MARK   = 9; //MAX 9
 
 //	Horizontal Parameter	( Pixel )
 parameter	H_SYNC_CYC	=	96;
@@ -44,8 +44,8 @@ parameter	V_SYNC_ACT	=	480;
 parameter	V_SYNC_FRONT=	10;
 parameter	V_SYNC_TOTAL=	525;
 //	Start Offset
-parameter	X_START		=	H_SYNC_FRONT+H_SYNC_CYC+H_SYNC_BACK;
-parameter	Y_START		=	V_SYNC_FRONT+V_SYNC_CYC+V_SYNC_BACK;
+parameter	X_START		=	H_SYNC_CYC+H_SYNC_BACK;
+parameter	Y_START		=	V_SYNC_CYC+V_SYNC_BACK;
 parameter	H_BLANK	   =	H_SYNC_FRONT+H_SYNC_CYC+H_SYNC_BACK;
 parameter	V_BLANK	   =	V_SYNC_FRONT+V_SYNC_CYC+V_SYNC_BACK;
 
@@ -91,19 +91,16 @@ end
 
 //---output 
 assign oVGA_BLANK	=   ~((H_Cont < H_BLANK ) || ( V_Cont < V_BLANK ));
-assign oVGA_H_SYNC =	( ( H_Cont > (H_SYNC_FRONT) )  &&  ( H_Cont <= (H_SYNC_CYC + H_SYNC_FRONT)))?0 :1 ; 
+assign oVGA_H_SYNC =	( ( H_Cont > (H_SYNC_FRONT-H_MARK1 ) )  &&  ( H_Cont <= (H_SYNC_CYC + H_SYNC_FRONT-H_MARK1)))?0 :1 ; 
 assign oVGA_V_SYNC =	( ( V_Cont > (V_SYNC_FRONT ) )  &&  ( V_Cont <= (V_SYNC_CYC + V_SYNC_FRONT)))?0 :1 ; 
 //assign oVGA_H_SYNC =	( ( H_Cont > (H_SYNC_BACK ) )  &&  ( H_Cont <= (H_SYNC_CYC + H_SYNC_BACK)))?0 :1 ; 
 //assign oVGA_V_SYNC =	( ( V_Cont > (V_SYNC_BACK ) )  &&  ( V_Cont <= (V_SYNC_CYC + V_SYNC_BACK)))?0 :1 ; 
 
-
-
-
-assign oRequest    = (  H_Cont >=  X_START-H_MARK1  &&  H_Cont< X_START+iVideo_W-H_MARK1 
+assign oRequest    = (  H_Cont >=  X_START+H_MARK+2  &&  H_Cont< X_START+iVideo_W+H_MARK+2 
 							  &&
-							   V_Cont >=  Y_START-V_MARK && V_Cont< Y_START + iVideo_H -V_MARK)?1:0 ; 
+							   V_Cont >=  Y_START+V_MARK && V_Cont< Y_START + iVideo_H + V_MARK)?1:0 ; 
 
-assign oFrameDone = ( (H_Cont ==  X_START+iVideo_W-H_MARK1) && (V_Cont ==  Y_START + iVideo_H-V_MARK))? 1:0 ; 
+assign oFrameDone = ( (H_Cont ==  X_START+iVideo_W+H_MARK) && (V_Cont ==  Y_START + iVideo_H+V_MARK))? 1:0 ; 
                   
 assign	oVGA_SYNC =	 1'b0   ;
 assign	oVGA_R	 =	 oVGA_BLANK ?	(iRed+iGreen+iBlue)/3	   :	0;

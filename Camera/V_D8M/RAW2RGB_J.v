@@ -11,6 +11,7 @@ input           VGA_HS ,
 output	[7:0] oRed,
 output 	[7:0] oGreen,
 output	[7:0] oBlue,
+output	[7:0] bw,
 output         oDVAL
 
 );
@@ -32,6 +33,7 @@ assign   oRed	 = mCCD_R[9:2];
 assign  oGreen  = mCCD_G[9:2] ;
 assign	oBlue	 = mCCD_B[9:2];
 
+assign bw = (mCCD_R[9:2]+mCCD_G[9:2]+mCCD_B[9:2])/3;
 
 //--------
 
@@ -61,10 +63,12 @@ Line_Buffer_J 	u0	(
 	
 
 reg    RD_EN ; 
-always @( posedge VGA_CLK  )  RD_EN <= (( mX_Cont > D8M_VAL_LINE_MIN ) && (mX_Cont < LINE_MAX-D8M_VAL_LINE_MIN ))?1:0 ; 		
+always @( posedge VGA_CLK  )  RD_EN <= (( mX_Cont > D8M_VAL_LINE_MIN ) && (mX_Cont <= LINE_MAX-D8M_VAL_LINE_MIN ))?1:0 ; 	
+
+assign oDVAL = RD_EN;
 						
 RAW_RGB_BIN  bin(
-      .CLK  ( VGA_CLK ), 
+      .CLK  ( ~VGA_CLK ), 
       .RESET_N ( RD_EN ) , 
       .D0   ( mDAT0_0),
       .D1   ( mDAT0_1),
@@ -75,7 +79,7 @@ RAW_RGB_BIN  bin(
       .R    ( mCCD_R),
       .G    ( mCCD_G), 
       .B    ( mCCD_B),
-      .oDVAL(oDVAL),
+      .oDVAL(),
 ); 
 
 

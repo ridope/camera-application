@@ -12,14 +12,17 @@ class MemLogic(Module):
     def __init__(self, data_width, depth):
 
         mem = Memory(data_width, depth)
+
+        length = depth * data_width//8
         
         self.specials.port = mem.get_port( write_capable=True )
 
         self.logic_write_data = Signal(data_width)
-        self.local_adr = Signal()
+        self.local_adr = Signal(max=length)
         logic_write_enable_signal = Signal()
 
         pre_write_data = Signal(data_width)
+        pre_local_adr = Signal(max=length)
         
         # connect the write port to local logic
         self.comb += [
@@ -62,9 +65,10 @@ class MemLogic(Module):
 
         # Write Logic
         self.sync += [
-            If(pre_write_data != self.logic_write_data,
+            If((pre_write_data != self.logic_write_data) | (pre_local_adr != self.local_adr),
                 logic_write_enable_signal.eq(1),
-                pre_write_data.eq(self.logic_write_data)
+                pre_write_data.eq(self.logic_write_data),
+                pre_local_adr.eq(self.local_adr)
             ).Else(
                 logic_write_enable_signal.eq(0)
             )

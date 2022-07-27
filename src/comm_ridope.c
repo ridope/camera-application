@@ -98,11 +98,15 @@ void comm_ridope_send_img(uint8_t * img, CMD_TYPE_t img_type,uint32_t N, uint32_
 
     comm_ridope_send_cmd(&msg);
 
+    printf("Size sent!\n");
+
     msg.msg_data.cmd = START_TRANS;
 
     comm_ridope_send_cmd(&msg);
 
-    for(int i=0; i<N*M; i++) {
+    printf("Start flag!\n");
+
+    for(int i=0; i<N*M*4; i=i+4) {
         msg.msg_data.cmd = img_type;
         msg.msg_data.data = img[i] + 0*I;
         
@@ -112,6 +116,8 @@ void comm_ridope_send_img(uint8_t * img, CMD_TYPE_t img_type,uint32_t N, uint32_
      msg.msg_data.cmd = STOP_TRANS;
 
     comm_ridope_send_cmd(&msg);
+
+    printf("Stop flag!\n");
 }
 
 /**
@@ -164,6 +170,6 @@ void comm_ridope_send_cmd(COMM_RIDOPE_MSG_t *msg)
     }
 
     uart_write('\n');
-    //uart_write('\r');
+    uart_write('\r');
 }
 

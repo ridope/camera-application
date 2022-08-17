@@ -5,17 +5,17 @@ input	  [9:0]	 iDATA,
 input			    RST,
 input           VGA_CLK,
 input   [15:0]  LINE_MAX, 
-input           READ_Request ,
 input           VGA_VS ,	
 input           VGA_HS ,	 
 output	[7:0] oRed,
 output 	[7:0] oGreen,
 output	[7:0] oBlue,
 output	[7:0] bw,
-output         oDVAL
+output         oDVAL,
+input          framenew
 
 );
-parameter D8M_VAL_LINE_MAX  = 640; 
+
 parameter D8M_VAL_LINE_MIN  = 0; 
 
 //----- WIRE /REG 
@@ -40,7 +40,7 @@ assign bw = (mCCD_R[9:2]+mCCD_G[9:2]+mCCD_B[9:2])/3;
 VGA_RD_COUNTER  tr( 
   .VGA_CLK      (VGA_CLK     ),
   .VGA_VS       (VGA_VS      ), 
-  .READ_Request (READ_Request), 
+  .READ_Request (VGA_HS), 
   .X_Cont       (mX_Cont      ),
   .Y_Cont       (mY_Cont      )
  
@@ -53,23 +53,18 @@ Line_Buffer_J 	u0	(
 						.X_Cont    ( mX_Cont) , 
 						.mCCD_DATA ( iDATA),
 						.VGA_CLK   ( VGA_CLK), 
-                  .READ_Request (READ_Request),
+                  .READ_Request (VGA_HS),
                   .VGA_VS    ( VGA_VS),	
                   .READ_Cont ( mX_Cont ),
                   .V_Cont    ( mY_Cont ),
 						.taps0x    ( mDAT0_0),
 						.taps1x    ( mDAT0_1)
 						);					
-	
 
-reg    RD_EN ; 
-always @( posedge VGA_CLK  )  RD_EN <= (( mX_Cont > D8M_VAL_LINE_MIN ) && (mX_Cont <= LINE_MAX-D8M_VAL_LINE_MIN ))?1:0 ; 	
 
-assign oDVAL = RD_EN;
-						
 RAW_RGB_BIN  bin(
       .CLK  ( ~VGA_CLK ), 
-      .RESET_N ( RD_EN ) , 
+      .RESET_N ( ~framenew ) , 
       .D0   ( mDAT0_0),
       .D1   ( mDAT0_1),
       .X    ( mX_Cont [0]),
@@ -79,7 +74,7 @@ RAW_RGB_BIN  bin(
       .R    ( mCCD_R),
       .G    ( mCCD_G), 
       .B    ( mCCD_B),
-      .oDVAL(),
+      .oDVAL(oDVAL),
 ); 
 
 

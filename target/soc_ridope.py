@@ -128,8 +128,8 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
         addr = Signal(max=length)
 
         self.sync.vga += [
-            If(self.camera.pvalid==1,
-                self.logicmem.logic_write_data.eq(self.camera.pixel_o),
+            If(self.camera.read_request==1,
+                self.logicmem.logic_write_data.eq(self.camera.r_auto),
                 self.logicmem.local_adr.eq(addr),
                 addr.eq(addr+1)
             ),

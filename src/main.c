@@ -290,7 +290,7 @@ static void init_cam(){
 	*reg = camera_control_read();
 
 	camera.row_size = 32;
-	camera.col_size = 32;
+	camera.col_size = 36;
 
 	camera_control_write(*reg);
 }
@@ -368,6 +368,9 @@ int main(void)
 		}else if(rx_msg.msg_data.cmd == CAMERA_EXPO)
 		{
 			set_exposure(crealf(rx_msg.msg_data.data));
+		}else if(rx_msg.msg_data.cmd == REBOOT)
+		{
+			reboot_cmd();
 		}
 	}
 

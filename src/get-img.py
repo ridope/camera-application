@@ -103,7 +103,7 @@ def get_img():
             plt.figure(1); plt.clf()
             plt.imshow(im, cmap='gray',vmin=0, vmax=255)
             #plt.show()
-            plt.pause(0.017)
+            plt.pause(1)
 
             N=0
             M=0
@@ -114,11 +114,7 @@ def get_img():
 def run_timer_func():
     while True:
         schedule.run_pending()
-        time.sleep(0.017)
-
-def send_reboot():
-    init = pack("<iff", cmd.REBOOT.value, 0, 0)
-    tx_buffer.put(init)
+        time.sleep(1)
 
 # turn-on the tx thread
 threading.Thread(target=tx, daemon=True).start()
@@ -131,7 +127,7 @@ def send_get_cmd():
     tx_buffer.put(data_send)
 
 
-schedule.every(0.017).seconds.do(send_get_cmd)
+schedule.every(1).seconds.do(send_get_cmd)
 
 try:
     print("Available commands: ")
@@ -144,6 +140,10 @@ try:
             expo_value = input("Exposition value: ")
 
             data_send = pack("<iff", cmd.CAMERA_EXPO.value, int(expo_value),0)
+            tx_buffer.put(data_send)
+        
+        if(value=="reboot"):
+            data_send = pack("<iff", cmd.REBOOT.value, 0,0)
             tx_buffer.put(data_send)
 
 

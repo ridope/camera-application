@@ -160,3 +160,4 @@ except:
     rx_buffer.join()     
     uart.close()     
     sys.exit()
+

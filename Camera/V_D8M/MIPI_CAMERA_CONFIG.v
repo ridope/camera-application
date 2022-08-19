@@ -7,7 +7,7 @@ module MIPI_CAMERA_CONFIG  (
    input [7:0] TEST_REG, 
    input [15:0] WSIZE_REG,
    input [15:0] HSIZE_REG,
-   input [15:0] EXPO_REG,
+   input [23:0] EXPO_REG,
    output [7:0] AVG_REG,
 	
    output  I2C_SCL, 
@@ -56,7 +56,7 @@ wire [13:0] BB;
 //B_GAIN b2( . result ( BB ))  ; //400
 
 
-parameter     WORD_NUM_MAX = 312; //294;// 317 	 ;  
+parameter     WORD_NUM_MAX = 313; //294;// 317 	 ;  
 
 //-- I2C clock 400k generater 
 CLOCKMEM c1(  .CLK ( CLK_50 ) , .CLK_FREQ ( 125 )  , .CK_1HZ (CLK_400K) ) ; 
@@ -631,20 +631,21 @@ case ( WCNT )
    295	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5681, 8'h0}; // X_start_avg L
    296	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5682, 8'h0}; // Y_start_avg H
    297	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5683, 8'h0}; // Y_start_avg L
-   298	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5684, 8'h02}; // Window_W_avg H
-   299	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5685, 8'h80}; // Window_W_avg L
-   300	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5686, 8'h01}; // Window_H_avg H
-   301	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5687, 8'hE0}; // Window_H_avg L
+   298	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5684, WSIZE_REG[15:8]}; // Window_W_avg H
+   299	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5685, WSIZE_REG[7:0]}; // Window_W_avg L
+   300	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5686, HSIZE_REG[15:8]}; // Window_H_avg H
+   301	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5687, HSIZE_REG[7:0]}; // Window_H_avg L
    302	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5688, 8'h02}; // Window_H_avg L
    303	 :SLV8_REG16_DATA8<= { 8'h6c,16'h0100, 8'h01}; //; wake up, streaming
-   304	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3501, EXPO_REG[15:8]}; // exposure H
-   305	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3502, EXPO_REG[7:0]}; // exposure L
-   306	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5e00, TEST_REG}; // test pattern off
-   307	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3808, WSIZE_REG[15:8]}; // X output size H. 0x02
-   308	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3809, WSIZE_REG[7:0]}; // X output size L. 0x80
-   309	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380a, HSIZE_REG[15:8]}; // Y output size H. 0x01
-   310	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380b, HSIZE_REG[7:0]}; // Y output size L. 0xE0 // 60 fps (combined with pll settings)
-   311	 :SLV8_REG16_DATA8<= { TIME_DELAY, 16'h0, 8'hFF};
+   304	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3500, EXPO_REG[23:16]}; // exposure HH
+   305	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3501, EXPO_REG[15:8]}; // exposure H
+   306	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3502, EXPO_REG[7:0]}; // exposure L
+   307	 :SLV8_REG16_DATA8<= { 8'h6c,16'h5e00, TEST_REG}; // test pattern off
+   308	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3808, WSIZE_REG[15:8]}; // X output size H. 0x02
+   309	 :SLV8_REG16_DATA8<= { 8'h6c,16'h3809, WSIZE_REG[7:0]}; // X output size L. 0x80
+   310	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380a, HSIZE_REG[15:8]}; // Y output size H. 0x01
+   311	 :SLV8_REG16_DATA8<= { 8'h6c,16'h380b, HSIZE_REG[7:0]}; // Y output size L. 0xE0 // 60 fps (combined with pll settings)
+   312	 :SLV8_REG16_DATA8<= { TIME_DELAY, 16'h0, 8'hFF};
 	//     {END_OF_SCRIPT, 0, 0}
    endcase 
 end 	

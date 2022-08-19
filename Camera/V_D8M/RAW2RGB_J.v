@@ -16,7 +16,7 @@ input          framenew
 
 );
 
-parameter D8M_VAL_LINE_MIN  = 0; 
+parameter D8M_VAL_LINE_MIN  = 1; 
 
 //----- WIRE /REG 
 wire	   [9:0]	mDAT0_0;
@@ -26,7 +26,6 @@ wire 		[9:0]	mCCD_G;
 wire 		[9:0]	mCCD_B;
 wire	[10:0]	mX_Cont;
 wire	[10:0]	mY_Cont;
-
 
 //-------- RGB OUT ---- 
 assign   oRed	 = mCCD_R[9:2];
@@ -61,6 +60,9 @@ Line_Buffer_J 	u0	(
 						.taps1x    ( mDAT0_1)
 						);					
 
+// Control values to produce a image without any black border
+reg    RD_EN ; 
+always @( posedge VGA_CLK  )  RD_EN <= ( (mY_Cont > D8M_VAL_LINE_MIN)  && (mX_Cont < LINE_MAX-3)) ? VGA_VS & VGA_HS:0 ; 	
 
 RAW_RGB_BIN  bin(
       .CLK  ( ~VGA_CLK ), 
@@ -69,7 +71,7 @@ RAW_RGB_BIN  bin(
       .D1   ( mDAT0_1),
       .X    ( mX_Cont [0]),
       .Y    ( mY_Cont [0]),
-      .iDVAL( VGA_VS & VGA_HS),
+      .iDVAL( RD_EN),
        
       .R    ( mCCD_R),
       .G    ( mCCD_G), 

@@ -15,7 +15,7 @@ module MIPI_BRIDGE_CAMERA_Config   (
  input [7:0] TEST_REG,
  input [15:0] WSIZE_REG,
  input [15:0] HSIZE_REG,
- input [15:0] EXPO_REG,
+ input [23:0] EXPO_REG,
  output [7:0] AVG_REG
 
  ); 

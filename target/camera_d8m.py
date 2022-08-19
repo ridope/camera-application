@@ -65,6 +65,9 @@ class Camera_D8M(Module, AutoCSR):
         self.framedone_vga = Signal()
         self.framenew_capture = Signal()
 
+        cam_expo = Signal(24)
+        cam_expo_out = Signal(24)
+
         sdram_rd_data = Signal(16)
         dly_rst_0 = Signal()
         dly_rst_1 = Signal()

@@ -6,6 +6,15 @@
  */
 #include "ridope_sp.h"
 
+/**
+ * @brief Generates the normalized histogram of the image
+ * 
+ * @param img_in 	Pointer to the input image
+ * @param img_size  Size of the image
+ * @param hist_out  Pointer to the output histrogram
+ * @param hist_max 	Max level of the histogram
+ * @return uint8_t  Returns 0 if success
+ */
 uint8_t ridope_histogram(const uint8_t *img_in, size_t img_size, float *hist_out, uint16_t hist_max)
 {
 	/* Checking input pointers */
@@ -24,13 +33,14 @@ uint8_t ridope_histogram(const uint8_t *img_in, size_t img_size, float *hist_out
 		hist_out[i] = 0;
 	}
 
-
+	/* Building histogram */
 	for(int i = 0; i < img_size; i++)
 	{
 		uint8_t value = img_in[i];
 		hist_out[value] += 1;
 	}
 
+	/* Normalizing the histogram */
 	for(int i = 0; i <= hist_max; i++)
 	{
 		hist_out[i] = hist_out[i]/img_size;
@@ -40,6 +50,15 @@ uint8_t ridope_histogram(const uint8_t *img_in, size_t img_size, float *hist_out
 	return 0;
 }
 
+/**
+ * @brief Otsu's method
+ * 
+ * @param img_in 	Pointer to the input image
+ * @param img_out 	Pointer to the output image
+ * @param height 	Height of the input image
+ * @param width 	Width of the input image	
+ * @return uint8_t  Return 0 if success
+ */
 uint8_t ridope_otsu(const uint8_t *img_in, uint8_t *img_out, size_t height, size_t width)
 {
 	/* Checking input pointers */
@@ -65,6 +84,7 @@ uint8_t ridope_otsu(const uint8_t *img_in, uint8_t *img_out, size_t height, size
 	/* Image histogram */
 	ridope_histogram(img_in, N, &histogram[0], max_intensity);
 
+	/* Auxiliary parameters */
 	cum_sum[0] = histogram[0];
 	mean[0] = 0;
 
@@ -74,6 +94,7 @@ uint8_t ridope_otsu(const uint8_t *img_in, uint8_t *img_out, size_t height, size
 		mean[i] = mean[i-1] + i*histogram[i];
 	}
 
+	/* Otsu's threshold method */
 	for(int i = 0; i <= max_intensity; i++)
 	{
 		w0 = cum_sum[i];

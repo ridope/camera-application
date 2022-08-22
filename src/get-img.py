@@ -14,7 +14,7 @@ from enum import Enum
 import matplotlib.pyplot as plt
 import schedule
 
-cmd = Enum('CMD_TYPE', 'REBOOT TRANS_PHOTO TRANS_FFT TRANS_IFFT PHOTO_SIZE START_TRANS STOP_TRANS OP_TIME HELP CAMERA_RST CAMERA_TRIG CAMERA_EXPO CAMERA_SIZE CAMERA_FOV CAMERA_IMG VGA_SIZE NULL_CMD', start=48)
+cmd = Enum('CMD_TYPE', 'REBOOT TRANS_PHOTO TRANS_FFT TRANS_IFFT PHOTO_SIZE START_TRANS STOP_TRANS OP_TIME HELP CAMERA_RST CAMERA_TRIG CAMERA_EXPO CAMERA_AVG CAMERA_SIZE CAMERA_FOV CAMERA_IMG VGA_SIZE NULL_CMD', start=48)
 
 tx_buffer = queue.Queue()
 rx_buffer = queue.Queue()
@@ -43,7 +43,13 @@ def rx():
                     while(len(item) < calcsize(format)):
                         item += uart.read_until()
 
-                    item_temp = unpack(format, item)
+                    try:
+                        item_temp = unpack(format, item)
+                    except error as err:
+                        print(err)
+                        print("Got item len: ", len(item))
+
+
                     rx_buffer.put(item_temp)
 
                 else:
@@ -61,6 +67,12 @@ def get_img():
     while True:
         item = rx_buffer.get()
         rx_buffer.task_done() 
+
+        if(item[1] == cmd.CAMERA_EXPO.value):
+            print("Cam expo: ", int(item[2]))
+        
+        if(item[1] == cmd.CAMERA_AVG.value):
+            print("Cam avg: ", int(item[2])) 
 
         if(item[1] == cmd.PHOTO_SIZE.value):
             N = int(item[2])
@@ -100,6 +112,7 @@ def get_img():
             im_array_normalized = im_array_normalized.astype(np.uint8)
 
             im = Image.fromarray(im_array_reshaped, mode="L")
+            im.convert("L"). save("result.png")
             plt.figure(1); plt.clf()
             plt.imshow(im, cmap='gray',vmin=0, vmax=255)
             #plt.show()

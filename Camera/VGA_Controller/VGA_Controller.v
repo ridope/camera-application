@@ -103,9 +103,9 @@ assign oRequest    = (  H_Cont >=  X_START+H_MARK  &&  H_Cont< X_START+iVideo_W+
 assign oFrameDone = ( (H_Cont ==  X_START+iVideo_W+H_MARK) && (V_Cont ==  Y_START + iVideo_H+V_MARK))? 1:0 ; 
                   
 assign	oVGA_SYNC =	 1'b0   ;
-assign	oVGA_R	 =	 oVGA_BLANK ?	(iRed+iGreen+iBlue)/3	   :	0;
-assign	oVGA_G	 =	 oVGA_BLANK ?	(iRed+iGreen+iBlue)/3	:	0;
-assign	oVGA_B	 =	 oVGA_BLANK ?	(iRed+iGreen+iBlue)/3	   :	0;
+assign	oVGA_R	 =	 oVGA_BLANK&oRequest ?	(iRed+iGreen+iBlue)/3	   :	0;
+assign	oVGA_G	 =	 oVGA_BLANK&oRequest ?	(iRed+iGreen+iBlue)/3	:	0;
+assign	oVGA_B	 =	 oVGA_BLANK&oRequest ?	(iRed+iGreen+iBlue)/3	   :	0;
 								  								  
 endmodule
 

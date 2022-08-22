@@ -31,6 +31,7 @@ typedef enum CMD_TYPE
     CAMERA_RST,
     CAMERA_TRIG,
     CAMERA_EXPO,
+    CAMERA_AVG,
     CAMERA_SIZE,
     CAMERA_FOV,
     CAMERA_IMG,

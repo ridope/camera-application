@@ -104,15 +104,87 @@ static void set_exposure(uint32_t expo){
 	camera_input_exposure_write(expo);
 	//camera_test_update_write(0);
 }
-static void get_img(void){
-	printf("Got it!\n");
-	camera_input_trigger_write(1);
 
+uint32_t get_avg(uint8_t *img, uint16_t img_width, uint16_t imb_height)
+{
+	uint32_t sum = 0;
+	uint32_t max = 0;
+	int i;
+
+	for(i = 0; i < img_width*imb_height; i++)
+	{
+		sum += img[i];
+	}
+
+	return sum/i;
+}
+
+void get_next_expo(uint32_t *expo, uint32_t avg)
+{
+	uint32_t STEP_HIGH = 1000;
+	uint32_t STEP_MID = 500;
+	uint32_t STEP_LOW = 200;
+
+	uint8_t F_TARGET = 61;
+
+	if(avg > F_TARGET) 
+	{
+		if ((avg-F_TARGET) >= 64)
+		{
+			*expo = *expo - STEP_HIGH;
+		}
+		else if((avg-F_TARGET) >= 32)
+		{
+			*expo = *expo - STEP_MID;
+		}
+		else if((avg-F_TARGET) >= 1)
+		{
+			*expo = *expo - STEP_LOW;
+		}
+	}
+	else{
+		if ((F_TARGET-avg) >= 64)
+		{
+			*expo = *expo + STEP_HIGH;
+		}
+		else if((F_TARGET-avg) >= 32)
+		{
+			*expo = *expo + STEP_MID;
+		}
+		else if((F_TARGET-avg) >= 1)
+		{
+			*expo = *expo + STEP_LOW;
+		}
+	}
+          
+
+}
+
+static void get_img(uint32_t *expo){
+	printf("Got it!\n");
+	
+	uint32_t avg = get_avg(&(IMG_DRIVER->data[0]), IMG_WIDTH, IMG_HEIGTH);
+
+	get_next_expo(expo, avg);
+
+	set_exposure(*expo);
+
+	COMM_RIDOPE_MSG_t msg;
+	msg.msg_data.cmd = CAMERA_EXPO;
+	msg.msg_data.data = *expo; 
+
+	comm_ridope_send_cmd(&msg);
+
+	msg.msg_data.cmd = CAMERA_AVG;
+	msg.msg_data.data = avg; 
+	comm_ridope_send_cmd(&msg);
 	
 	printf("Sending img!\n");
 
 	comm_ridope_send_img(&(IMG_DRIVER->data[0]),TRANS_PHOTO, IMG_WIDTH, IMG_HEIGTH);
 	printf("Done sending!\n");
+
+	
 }
 
 static void init_cam(){
@@ -171,9 +243,7 @@ int main(void)
 
 		if(rx_msg.msg_data.cmd == CAMERA_TRIG)
 		{	
-			expo += 5000;
-			//camera_input_exposure_write(expo);
-			get_img();
+			get_img(&expo);
 		}else if(rx_msg.msg_data.cmd == CAMERA_EXPO)
 		{
 			set_exposure(crealf(rx_msg.msg_data.data));

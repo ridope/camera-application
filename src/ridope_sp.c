@@ -152,12 +152,15 @@ uint8_t ridope_gaussian_kernel(double *kernel_out, size_t kernel_size, float sig
 	}
 	double sum = 0;
 
+	// Middle of the kernel
+	double offset = (kernel_size - 1) / 2.0;
+
 	 for (int i = 0; i < kernel_size; i++)
 	 {
 		for (int j = 0; j < kernel_size; j++)
 		{
-			double x = i - (kernel_size - 1) / 2.0;
-			double y = j - (kernel_size - 1) / 2.0;
+			double x = i - offset;
+			double y = j - offset;
 			kernel_out[kernel_size * i + j] = exp(-(x*x + y*y) / (2 * sigma* sigma ));
 			sum += kernel_out[kernel_size * i + j];
 		}
@@ -178,6 +181,52 @@ uint8_t ridope_gaussian_kernel(double *kernel_out, size_t kernel_size, float sig
 	 }
 
 	 return 0;
+}
+
+/**
+ * @brief Generates a Sobel kernel
+ * 
+ * @param kernel_out 	Pointer to store the kernel generated
+ * @param kernel_size 	Size of the kernel
+ * @return uint8_t 		Returns 0 if success
+ */
+uint8_t ridope_sobel_kernel(double *Gx_out, double *Gy_out , size_t kernel_size)
+{
+	/* Checking input pointers */
+	if(Gx_out == NULL)
+	{
+		return 1;
+	}
+
+	if(Gy_out == NULL)
+	{
+		return 2;
+	}
+
+	// Middle of the kernel
+	uint8_t offset = (kernel_size - 1) / 2;
+
+	for (int i = 0; i < kernel_size; i++)
+	{
+		for (int j = 0; j < kernel_size; j++)
+		{
+			double x = i - offset;
+			double y = j - offset;
+
+			if (x == 0 && y == 0)
+			{
+				Gy_out[kernel_size * i + j] = 0;
+				Gx_out[kernel_size * i + j] = 0;
+			}
+			else
+			{
+				Gy_out[kernel_size * i + j] = x / (x*x + y*y);
+				Gx_out[kernel_size * i + j] = y / (x*x + y*y);
+			}
+		}
+	}
+
+	return 0;
 }
 
 /**

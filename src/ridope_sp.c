@@ -220,11 +220,31 @@ uint8_t ridope_sobel_kernel(double *Gx_out, double *Gy_out , size_t kernel_size)
 			}
 			else
 			{
-				Gy_out[kernel_size * i + j] = x / (x*x + y*y);
-				Gx_out[kernel_size * i + j] = y / (x*x + y*y);
+				Gy_out[kernel_size * i + j] = x / (2*(x*x + y*y));
+				Gx_out[kernel_size * i + j] = y / (2*(x*x + y*y));
 			}
 		}
 	}
+
+	printf("##### Gx ######\n");
+	for (int i = 0; i < kernel_size; i++)
+	{
+	 for (int j = 0; j < kernel_size; j++)
+	 {
+		 printf("%f ", Gx_out[kernel_size * i + j]);
+	 }
+	 printf("\n");
+	}
+
+	printf("##### Gy ######\n");
+	for (int i = 0; i < kernel_size; i++)
+	 {
+		 for (int j = 0; j < kernel_size; j++)
+		 {
+			 printf("%f ", Gy_out[kernel_size * i + j]);
+		 }
+		 printf("\n");
+	 }
 
 	return 0;
 }
@@ -260,31 +280,60 @@ uint8_t ridope_conv(const uint8_t *img_in, uint8_t *img_out, size_t height, size
 
 	// Middle of the kernel
 	uint8_t offset = kernel_size / 2;
-	uint8_t pixel;
-	uint8_t pixel_result;
+	double pixel;
+	double pixel_result;
+	double pixel_mask;
 
-	for(int x = 0; x < width; x++)
+	for(int x = 0; x < height; x++)
 	{
-		for(int y = 0; y < height; y++)
+		for(int y = 0; y < width; y++)
 		{
 			pixel_result = 0;
+
 			for(int a = 0; a < kernel_size; a++)
 			{
 				for(int b = 0; b < kernel_size; b++)
 				{
-					int xn = x + a - offset;
-					int yn = y + b - offset;
+					int x_n = x + a - offset;
+					int y_n = y + b - offset;
 
-					if (xn < 0 || yn < 0 || xn == width || yn == height)
+					if (x_n < 0 || y_n < 0 || x_n == width || y_n == height)
 					{
-						pixel = 0;
+						int x_near = x_n;
+						int y_near = y_n;
+
+						if(y_n < 0)
+						{
+							y_near = abs(y_n) + y_n;
+						}
+
+						if(x_n < 0)
+						{
+							x_near = abs(x_n) + x_n;
+						}
+
+						if(x_n == width)
+						{
+							x_near = width - 1;
+						}
+
+						if(y_n == height)
+						{
+							y_near = height - 1;
+						}
+						pixel_mask = kernel_in[kernel_size * a + b];
+						pixel = img_in[width * x_near + y_near]*pixel_mask;
 					}
 					else
 					{
-						pixel = img_in[width * x + y]*kernel_in[kernel_size * a + b];
+						pixel_mask = kernel_in[kernel_size * a + b];
+						pixel = img_in[width * x_n + y_n]*pixel_mask;
 					}
 					pixel_result += pixel;
 				}
+			}
+			if (pixel_result < 0){
+				pixel_result = pixel_result * -1;
 			}
 			img_out[width * x + y] = pixel_result;
 
@@ -293,4 +342,57 @@ uint8_t ridope_conv(const uint8_t *img_in, uint8_t *img_out, size_t height, size
 
 	return 0;
 
+}
+
+/**
+ * @brief Applies the Sobel filter in a image
+ * 
+ * @param img_in 		Pointer to the input image	
+ * @param img_x_out 	Pointer to the X component output image
+ * @param img_y_out 	Pointer to the Y component output image
+ * @param height 		Height of the input image
+ * @param width 		Width of the input image 
+ * @param kernel_size 	Filter size
+ * @return uint8_t 		Returns 0 if success
+ */
+uint8_t ridope_sobel_filter(const uint8_t *img_in, uint8_t *img_x_out, uint8_t *img_y_out, size_t height, size_t width, size_t kernel_size)
+{
+	/* Checking input pointers */
+	if(img_in == NULL)
+	{
+		return 1;
+	}
+
+	if(img_x_out == NULL)
+	{
+		return 2;
+	}
+
+	if(img_y_out == NULL)
+	{
+		return 3;
+	}
+
+	double *Gx = (double *)malloc(kernel_size*kernel_size*sizeof(double));
+	double *Gy = (double *)malloc(kernel_size*kernel_size*sizeof(double));
+
+	/* Checking memory allocation */
+	if(Gx == NULL)
+	{
+		return 4;
+	}
+
+	if(Gy == NULL)
+	{
+		return 5;
+	}
+
+	ridope_sobel_kernel(&Gx[0],  &Gy[0], kernel_size);
+
+	ridope_conv(img_in, img_x_out, height, width, &Gx[0], kernel_size);
+	ridope_conv(img_in, img_y_out, height, width, &Gy[0], kernel_size);
+
+	free(Gx);
+	free(Gy);
+	return 0;
 }

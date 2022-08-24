@@ -438,3 +438,69 @@ uint8_t ridope_sobel_filter(const uint8_t *img_in, uint8_t *img_x_out, uint8_t *
 	free(Gy);
 	return 0;
 }
+
+/**
+ * @brief Retrieves the magnitude and angle from the Sobel filter components 
+ * 
+ * @param img_x_in 		Pointer to the Sobel X component input image
+ * @param img_y_in 		Pointer to the Sobel Y component input image
+ * @param mag_out 		Pointer to the magnitude output matrix
+ * @param ang_out 		Pointer to the angle output matrix
+ * @param height 		Height of the input image
+ * @param width 		Width of the input image  
+ * @return uint8_t 		Returns 0 if success
+ */
+uint8_t ridope_get_mag_ang(const uint8_t *img_x_in, const uint8_t *img_y_in, uint8_t *mag_out, uint8_t *ang_out, size_t height, size_t width)
+{
+	/* Checking input pointers */
+	if(img_x_in == NULL)
+	{
+		return 1;
+	}
+
+	if(img_y_in == NULL)
+	{
+		return 2;
+	}
+
+	if(mag_out == NULL && ang_out == NULL)
+	{
+		return 3;
+	}
+
+	for(int x = 0; x < width; x++)
+	{
+		for(int y = 0; y < height; y++)
+		{
+			if(mag_out != NULL)
+			{
+				mag_out[width * x + y] = sqrt( img_x_in[width * x + y]*img_x_in[width * x + y] + img_y_in[width * x + y]*img_y_in[width * x + y]);
+			}
+
+			if(ang_out != NULL)
+			{
+				double ang_d = atan2(img_y_in[width * x + y], img_x_in[width * x + y]) * 180/M_PI;
+
+				if((ang_d >= 0 &&  ang_d <= 22.5) || (ang_d > 157.5 &&  ang_d <= 180))
+				{
+					ang_out[width * x + y] = 0;
+				}
+				else if(ang_d > 22.5 &&  ang_d <= 67.5)
+				{
+					ang_out[width * x + y] = 45;
+				}
+				else if(ang_d > 67.5 &&  ang_d <= 112.5)
+				{
+					ang_out[width * x + y] = 90;
+				}
+				else if(ang_d > 112.5 &&  ang_d <= 157.5)
+				{
+					ang_out[width * x + y] = 135;
+				}
+
+			}
+		}
+	}
+
+	return 0;
+}

@@ -345,6 +345,48 @@ uint8_t ridope_conv(const uint8_t *img_in, uint8_t *img_out, size_t height, size
 }
 
 /**
+ * @brief Applies the Gaussian filter in a image
+ * 
+ * @param img_in 		Pointer to the input image
+ * @param img_out 		Pointer to the output image
+ * @param height 		Height of the input image
+ * @param width 		Width of the input image 
+ * @param kernel_size 	Filter size
+ * @param sigma 		The standard deviation of the kernel
+ * @return uint8_t 		Returns 0 if success
+ */
+uint8_t ridope_gaussian_filter(const uint8_t *img_in, uint8_t *img_out, size_t height, size_t width, size_t kernel_size, float sigma)
+{
+	/* Checking input pointers */
+	if(img_in == NULL)
+	{
+		return 1;
+	}
+
+	if(img_out == NULL)
+	{
+		return 2;
+	}
+
+	double *kernel = (double *)malloc(kernel_size*kernel_size*sizeof(double));
+
+	/* Checking memory allocation */
+	if(kernel == NULL)
+	{
+		return 3;
+	}
+
+
+	ridope_gaussian_kernel(kernel, kernel_size, sigma);
+
+	ridope_conv(img_in, img_out, height, width, kernel, kernel_size);
+
+	free(kernel);
+
+	return 0;
+}
+
+/**
  * @brief Applies the Sobel filter in a image
  * 
  * @param img_in 		Pointer to the input image	

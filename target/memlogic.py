@@ -16,15 +16,15 @@ class MemLogic(Module):
 
         length = depth * data_width//8
 
-        addr_base = 3136
+        addr_base = 784
         
         self.logic_write_data = Signal(data_width)
-        self.local_adr = Signal(max=length)
+        self.local_adr = Signal(30)
 
         logic_write_enable_signal = Signal()
 
         pre_write_data = Signal(data_width)
-        pre_local_adr = Signal(max=length) 
+        pre_local_adr = Signal(30) 
        
         mem_if = wishbone.Interface()      
         
@@ -34,10 +34,12 @@ class MemLogic(Module):
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")
         
         fsm.act("IDLE",
-            mem_if.cyc.eq(0),
-            mem_if.stb.eq(0),
-            mem_if.we.eq(0),
-            mem_if.sel.eq(15),
+            NextValue(mem_if.cyc, 0),
+            NextValue(mem_if.stb, 0),
+            NextValue(mem_if.we, 0),
+            NextValue(mem_if.adr, addr_base + self.local_adr),
+            NextValue(mem_if.dat_w, self.logic_write_data),
+            NextValue(mem_if.sel, 15),
 
             If(logic_write_enable_signal == 1,
                 NextState("BUS-REQUEST")
@@ -45,9 +47,9 @@ class MemLogic(Module):
         )
 
         fsm.act("BUS-REQUEST",
-            mem_if.cyc.eq(1),
-            mem_if.stb.eq(1),
-            mem_if.we.eq(1),
+            NextValue(mem_if.cyc, 1),
+            NextValue(mem_if.stb, 1),
+            NextValue(mem_if.we, 1),
             If(mem_if.ack == 1,
                 NextState("IDLE")
             )
@@ -58,8 +60,6 @@ class MemLogic(Module):
             If((pre_write_data != self.logic_write_data) | (pre_local_adr != self.local_adr),
                 pre_write_data.eq(self.logic_write_data),
                 pre_local_adr.eq(self.local_adr),
-                mem_if.adr.eq(addr_base + self.local_adr),
-                mem_if.dat_w.eq(self.logic_write_data),
                 logic_write_enable_signal.eq(1),
             ).Else(
                 logic_write_enable_signal.eq(0)

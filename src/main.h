@@ -24,9 +24,7 @@ typedef struct  {
 #define IMG_HEIGTH          28
 #define LOGIC_MEMORY_BASE   (MMAP_M_1_BASE+0xC40)
 
-typedef struct {
-    uint8_t data[IMG_WIDTH*IMG_HEIGTH];
-} Img_TypeDef;
+uint8_t *data = (uint8_t *)  LOGIC_MEMORY_BASE;
 
 typedef struct {
     uint16_t row_size;
@@ -34,6 +32,5 @@ typedef struct {
 } D5M_CONTROL_TypeDef;
 
 #define SPERIPH_DRIVER      ((SPERIPH_TypeDef *)        CSR_CAMERA_BASE)
-#define IMG_DRIVER          ((Img_TypeDef     *)        LOGIC_MEMORY_BASE)
 
 #endif

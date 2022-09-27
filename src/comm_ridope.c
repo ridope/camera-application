@@ -106,7 +106,7 @@ void comm_ridope_send_img(uint8_t * img, CMD_TYPE_t img_type,uint32_t N, uint32_
 
     printf("Start flag!\n");
 
-    for(int i=0; i<N*M*4; i=i+4) {
+    for(int i=0; i<N*M; i=i+1) {
         msg.msg_data.cmd = img_type;
         msg.msg_data.data = img[i] + 0*I;
         

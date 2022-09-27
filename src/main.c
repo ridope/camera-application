@@ -167,11 +167,11 @@ void get_next_expo(uint32_t *expo, uint32_t avg)
 static void get_img(uint32_t *expo){
 	printf("Got it!\n");
 	
-	uint32_t avg = get_avg(&(IMG_DRIVER->data[0]), IMG_WIDTH, IMG_HEIGTH);
+	//uint32_t avg = get_avg(data, IMG_WIDTH, IMG_HEIGTH);
 
-	get_next_expo(expo, avg);
+	//get_next_expo(expo, avg);
 
-	set_exposure(*expo);
+	//set_exposure(*expo);
 
 	COMM_RIDOPE_MSG_t msg;
 	msg.msg_data.cmd = CAMERA_EXPO;
@@ -180,12 +180,12 @@ static void get_img(uint32_t *expo){
 	comm_ridope_send_cmd(&msg);
 
 	msg.msg_data.cmd = CAMERA_AVG;
-	msg.msg_data.data = avg; 
+	msg.msg_data.data = 50; 
 	comm_ridope_send_cmd(&msg);
 	
 	printf("Sending img!\n");
 
-	comm_ridope_send_img(&(IMG_DRIVER->data[0]),TRANS_PHOTO, IMG_WIDTH, IMG_HEIGTH);
+	comm_ridope_send_img(data,TRANS_PHOTO, IMG_WIDTH, IMG_HEIGTH);
 	printf("Done sending!\n");
 
 	
@@ -234,8 +234,6 @@ int main(void)
 
 	help();
 	prompt();
-
-	init_cam();
 
 	COMM_RIDOPE_MSG_t rx_msg;
 

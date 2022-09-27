@@ -21,8 +21,8 @@ class Camera_D8M(Module, AutoCSR):
         ])
 
         self.control = CSRStorage(fields=[
-            CSRField("WSize", size=16, description="Sensor Width Size", reset=34),
-            CSRField("HSize", size=16, description="Sensor Height Size", reset=36)
+            CSRField("WSize", size=16, description="Sensor Width Size", reset=30),
+            CSRField("HSize", size=16, description="Sensor Height Size", reset=34)
         ])
 
         self.test = CSRStorage(fields=[
@@ -36,8 +36,8 @@ class Camera_D8M(Module, AutoCSR):
         ])
 
         self.vga = CSRStorage(fields=[
-            CSRField("W", size=16, description="VGA Video Width", reset=32),
-            CSRField("H", size=16, description="VGA Video Height", reset=32),
+            CSRField("W", size=16, description="VGA Video Width", reset=28),
+            CSRField("H", size=16, description="VGA Video Height", reset=28),
         ])
 
         self.cam = CSRStatus(fields=[

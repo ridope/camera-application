@@ -129,13 +129,13 @@ def main(): # Instanciating the SoC and options
     soc.submodules.logicmem = MemLogic(soc,soc.bus1.data_width,int("0x1000",0),soc.bus1.bursting)
 
     # Writing in the scratch-pad mem
-    addr = Signal(max=length)
+    addr = Signal(32)
     write_data = Signal(data_width)
     logic_counter = Signal(max=3)
 
     soc.sync.vga += [
         If(soc.camera.read_request==1,
-            write_data.eq(Cat(soc.camera.r_auto,write_data[0:24])),
+            write_data.eq(Cat(write_data[8:32],soc.camera.r_auto)),
             If(logic_counter == 3,
                 soc.logicmem.logic_write_data.eq(write_data),
                 soc.logicmem.local_adr.eq(addr),

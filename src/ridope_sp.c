@@ -275,9 +275,9 @@ uint8_t ridope_conv(const uint8_t *img_in, uint8_t *img_out, size_t height, size
 	double pixel_result;
 	double pixel_mask;
 
-	for(int x = 0; x < width; x++)
+	for(int x = 0; x < height; x++)
 	{
-		for(int y = 0; y < height; y++)
+		for(int y = 0; y < width; y++)
 		{
 			pixel_result = 0;
 
@@ -459,9 +459,9 @@ uint8_t ridope_get_mag_ang(const uint8_t *img_x_in, const uint8_t *img_y_in, uin
 		return 3;
 	}
 
-	for(int x = 0; x < width; x++)
+	for(int x = 0; x < height; x++)
 	{
-		for(int y = 0; y < height; y++)
+		for(int y = 0; y < width; y++)
 		{
 			if(mag_out != NULL)
 			{
@@ -604,9 +604,9 @@ uint8_t ridope_non_max_supression(uint8_t *mag_in, uint8_t *ang_in, uint8_t *img
 		return 3;
 	}
 
-	for(int x = 0; x < width; x++)
+	for(int x = 0; x < height; x++)
 	{
-		for(int y = 0; y < height; y++)
+		for(int y = 0; y < width; y++)
 		{
 			int neighbor_x_1, neighbor_y_1;
 			int neighbor_x_2, neighbor_y_2;
@@ -614,30 +614,30 @@ uint8_t ridope_non_max_supression(uint8_t *mag_in, uint8_t *ang_in, uint8_t *img
 			if(ang_in[width * x + y] == 0)
 			{
 				neighbor_x_1 = x;
-				neighbor_y_1 = get_updated_index(y - 1, 0, height-1);
+				neighbor_y_1 = get_updated_index(y - 1, 0, width-1);
 				neighbor_x_2 = x;
-				neighbor_y_2 = get_updated_index(y + 1, 0, height-1);
+				neighbor_y_2 = get_updated_index(y + 1, 0, width-1);
 			}
 			else if(ang_in[width * x + y] == 45)
 			{
-				neighbor_x_1 = get_updated_index(x - 1, 0, width-1);
-				neighbor_y_1 = get_updated_index(y + 1, 0, height-1);
-				neighbor_x_2 = get_updated_index(x + 1, 0, width-1);
-				neighbor_y_2 = get_updated_index(y - 1, 0, height-1);
+				neighbor_x_1 = get_updated_index(x - 1, 0, height-1);
+				neighbor_y_1 = get_updated_index(y + 1, 0, width-1);
+				neighbor_x_2 = get_updated_index(x + 1, 0, height-1);
+				neighbor_y_2 = get_updated_index(y - 1, 0, width-1);
 			}
 			else if(ang_in[width * x + y] == 90)
 			{
-				neighbor_x_1 = get_updated_index(x - 1, 0, width-1);
+				neighbor_x_1 = get_updated_index(x - 1, 0, height-1);
 				neighbor_y_1 = y;
-				neighbor_x_2 = get_updated_index(x + 1, 0, width-1);
+				neighbor_x_2 = get_updated_index(x + 1, 0, height-1);
 				neighbor_y_2 = y;
 			}
 			else if(ang_in[width * x + y] == 135)
 			{
-				neighbor_x_1 = get_updated_index(x - 1, 0, width-1);
-				neighbor_y_1 = get_updated_index(y - 1, 0, height-1);
-				neighbor_x_2 = get_updated_index(x + 1, 0, width-1);
-				neighbor_y_2 = get_updated_index(y + 1, 0, height-1);
+				neighbor_x_1 = get_updated_index(x - 1, 0, height-1);
+				neighbor_y_1 = get_updated_index(y - 1, 0, width-1);
+				neighbor_x_2 = get_updated_index(x + 1, 0, height-1);
+				neighbor_y_2 = get_updated_index(y + 1, 0, width-1);
 			}
 
 			if((mag_in[width * x + y] >= mag_in[width * neighbor_x_1 + neighbor_y_1]) && (mag_in[width * x + y] >= mag_in[width * neighbor_x_2 + neighbor_y_2]))
@@ -676,9 +676,9 @@ uint8_t ridope_edge_tracking(uint8_t *img_in_out, uint8_t high_threshold, uint8_
 	int weak_edges_size = 0;
 
 	/* Counting strong and weak edges */
-	for(int x = 0; x < width; x++)
+	for(int x = 0; x < height; x++)
 	{
-		for(int y = 0; y < height; y++)
+		for(int y = 0; y < width; y++)
 		{
 
 			if(img_in_out[width * x + y] >= high_threshold)
@@ -698,9 +698,9 @@ uint8_t ridope_edge_tracking(uint8_t *img_in_out, uint8_t high_threshold, uint8_
 
 	int weak_i = 0;
 
-	for(int x = 0; x < width; x++)
+	for(int x = 0; x < height; x++)
 	{
-		for(int y = 0; y < height; y++)
+		for(int y = 0; y < width; y++)
 		{
 
 			if(img_in_out[width * x + y] < low_threshold)

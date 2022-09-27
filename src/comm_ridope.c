@@ -38,7 +38,7 @@ float complex* comm_ridope_receive_img(uint32_t *N, uint32_t *M){
     uint32_t img_pos = (*N)*(*M);
     float complex* img = malloc(img_pos*sizeof(float complex));
 
-    printf("N: %d F: %d\n", *N, *M);
+    printf("N: %ld F: %ld\n", *N, *M);
 
     // Checks mem allocation
     if(!img)
@@ -75,7 +75,7 @@ float complex* comm_ridope_receive_img(uint32_t *N, uint32_t *M){
 
     }while(rx.msg_data.cmd != STOP_TRANS && counter < img_pos);
 
-    printf("Counter: %d, Img_size: %d\n", counter, img_pos);
+    printf("Counter: %ld, Img_size: %ld\n", counter, img_pos);
     printf("Got stop flag!\n");
 
     return img;

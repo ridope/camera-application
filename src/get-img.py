@@ -18,7 +18,7 @@ cmd = Enum('CMD_TYPE', 'REBOOT TRANS_PHOTO TRANS_FFT TRANS_IFFT PHOTO_SIZE START
 
 tx_buffer = queue.Queue()
 rx_buffer = queue.Queue()
-uart = serial.Serial("/dev/ttyUSB0", 115200)
+uart = serial.Serial("/dev/ttyUSB1", 115200)
 
 next_img = True
 image_name = ""

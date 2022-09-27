@@ -21,7 +21,7 @@ all: demo.bin
 	chmod -x $@
 
 demo.elf: $(OBJECTS)
-	$(CC) $(LDFLAGS) \
+	$(CC) -Os $(LDFLAGS) -Wl,-Map=output.map -Wl,--print-memory-usage \
 		-T linker.ld \
 		-N -o $@ \
 		$(OBJECTS) \

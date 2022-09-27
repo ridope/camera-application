@@ -8,6 +8,7 @@
 
 import os
 import argparse
+import sys
 
 from litex.build import io
 from litex.soc.doc import generate_docs, generate_svd
@@ -35,46 +36,37 @@ from migen.genlib.cdc import BlindTransfer
 from camera_d8m import Camera_D8M
 from memlogic import MemLogic
 
-class _CRG(Module): # Clock Region definition
-    def __init__(self, platform, sys_clk_freq):
-        self.rst = Signal()
-        self.clock_domains.cd_sys = ClockDomain()
-        self.clock_domains.cd_d8m = ClockDomain()
-        self.clock_domains.cd_vga = ClockDomain()
-        self.clock_domains.cd_sdram = ClockDomain()
-        self.clock_domains.cd_sdram_ps = ClockDomain()
-       
-        clk50 = platform.request("clk50")
+# caution: path[0] is reserved for script path (or '' in REPL)
+sys.path.insert(1, '../ext_lib/Asymetric-Multi-Processing/Dual_Core')
 
-        # PLL - instanciating an Intel FPGA PLL outputing a clock at sys_clk_freq
-        self.submodules.pll = pll = Max10PLL(speedgrade="-7")
-        self.comb += pll.reset.eq(self.rst)
-        pll.register_clkin(clk50, 50e6)
-        pll.create_clkout(self.cd_sys, sys_clk_freq)
-        pll.create_clkout(self.cd_sdram, sys_clk_freq*2)
-        pll.create_clkout(self.cd_sdram_ps, sys_clk_freq*2, phase=-108)
-        pll.create_clkout(self.cd_vga,  sys_clk_freq/2)
-        pll.create_clkout(self.cd_d8m,  20e6)
-        
-class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
+from amp import BaseSoC
 
-    mem_map = {
-      "logic_memory": 0x80000000,  # this just needs to be a unique block
-    }
-    mem_map.update(SoCCore.mem_map)
+def main(): # Instanciating the SoC and options
+    parser = argparse.ArgumentParser(description="LiteX SoC on DE10-Lite")
+    parser.add_argument("--build",               action="store_true", help="Build bitstream")
+    parser.add_argument("--load",                action="store_true", help="Load bitstream")
+    parser.add_argument("--build_dir",      default='',                  help="Base output directory.")
+    parser.add_argument("--sys-clk-freq",        default=50e6,        help="System clock frequency (default: 50MHz)")
+    parser.add_argument("--csr_csv",            default="csr.csv",    help="Write SoC mapping to the specified CSV file.")
+    parser.add_argument("--with-video-terminal", action="store_true", help="Enable Video Terminal (VGA)")
+    builder_args(parser)
+    soc_core_args(parser)
+    args = parser.parse_args()
 
-    def __init__(self, sys_clk_freq=int(50e6), with_video_terminal=False, **kwargs):
-        platform = terasic_de10lite.Platform()
+    platform = terasic_de10lite.Platform()
 
-        # SoCCore ----------------------------------------------------------------------------------
-        #These kwargs overwrite the value find on soc / soc_core
-        #So you can change here the sizes of the different memories
-        kwargs["integrated_rom_size"] = 0x8000 # chose rom size, holding bootloader (min = 0x6000)
-        kwargs["integrated_sram_size"] = 0x8000 # chose sram size, holding stack and heap. (min = 0x6000)
-        kwargs["integrated_main_ram_size"] = 0x10000 # 0 means external RAM is used, non 0 allocates main RAM internally
-        kwargs["uart_name"] = "arduino_serial"
+    platform.add_extension([
+                        ("arduino_serial", 0,
+                            Subsignal("tx", Pins("AA19"), IOStandard("3.3-V LVTTL")), # Arduino IO11
+                            Subsignal("rx", Pins("Y19"), IOStandard("3.3-V LVTTL"))  # Arduino IO12
+                        ),
+                        ("arduino_serial", 1,
+                            Subsignal("tx", Pins("AB20"), IOStandard("3.3-V LVTTL")), # Arduino IO11
+                            Subsignal("rx", Pins("F16"), IOStandard("3.3-V LVTTL"))  # Arduino IO12
+                        ),
+                        ])
 
-        platform.add_extension([("d8m", 0,
+    platform.add_extension([("d8m", 0,
                         Subsignal("mipi_d", Pins(
                             "W9 V8 W8 V7 W7 W6 V5 W5",
                             "AA15 AA14")),
@@ -95,69 +87,73 @@ class BaseSoC(SoCCore): # SoC definition - memory sizes are overloaded
                         IOStandard("3.3-V LVTTL")
                     )])
 
-        platform.add_extension([("arduino_serial", 0,
-                                    Subsignal("tx", Pins("AA19"), IOStandard("3.3-V LVTTL")), # Arduino IO11
-                                    Subsignal("rx", Pins("Y19"), IOStandard("3.3-V LVTTL"))  # Arduino IO12
-                                ),])
-        
-        SoCCore.__init__(self, platform, sys_clk_freq,
-            ident          = "LiteX SoC on DE10-Lite",
-            **kwargs)
-
-        self.submodules.crg = _CRG(platform, sys_clk_freq) # CRG instanciation   
-       
-        
-        self.submodules.camera = Camera_D8M(platform)
-        self.add_csr("camera")
-
-        # infer the logic block with memory
-        memdepth = 32*32
-        data_width = 32
-        length = memdepth * data_width//8
-        self.submodules.logicmem = MemLogic(data_width,memdepth)
-
-        # define the memory region size/location
-        # memdepth is the depth of the memory inferred in your logic block
-        # the length is in bytes, so for example if the data_width of your memory
-        # block is 32 bits, the total length is memdepth * 4
-        self.add_memory_region("logic_memory", self.mem_map["logic_memory"], length, type='io')
-
-        self.add_wb_slave(self.mem_map["logic_memory"], self.logicmem.bus)
-
-        # Writing in the scratch-pad mem
-        addr = Signal(max=length)
-
-        self.sync.vga += [
-            If(self.camera.read_request==1,
-                self.logicmem.logic_write_data.eq(self.camera.r_auto),
-                self.logicmem.local_adr.eq(addr),
-                addr.eq(addr+1)
-            ),
-
-            If(self.camera.framedone_vga==1,
-                addr.eq(0)
-            )
-        ]
-
-
-def main(): # Instanciating the SoC and options
-    parser = argparse.ArgumentParser(description="LiteX SoC on DE10-Lite")
-    parser.add_argument("--build",               action="store_true", help="Build bitstream")
-    parser.add_argument("--load",                action="store_true", help="Load bitstream")
-    parser.add_argument("--sys-clk-freq",        default=50e6,        help="System clock frequency (default: 50MHz)")
-    parser.add_argument("--csr_csv",            default="csr.csv",    help="Write SoC mapping to the specified CSV file.")
-    parser.add_argument("--with-video-terminal", action="store_true", help="Enable Video Terminal (VGA)")
-    builder_args(parser)
-    soc_core_args(parser)
-    args = parser.parse_args()
+    sys_clk_freq = int(float(args.sys_clk_freq))
 
     soc = BaseSoC(
-        sys_clk_freq        = int(float(args.sys_clk_freq)),
-        with_video_terminal = args.with_video_terminal,
-        
-        **soc_core_argdict(args)
+        platform_name  = 'De10Lite',
+        platform       = platform,
+        sys_clk_freq   = sys_clk_freq,
+        bus_data_width=  32,
+        mux            = False,
+        build_dir      = args.build_dir,
+        shared_ram_size= int("0x200",0),
+        name_1         = "femtorv",
+        name_2         = "firev",
+        sram_1_size    = int("0x8000",0),
+        sram_2_size    = int("0x10000",0),
+        ram_1_size     = int("0x2000",0),
+        ram_2_size     = int("0x0",0),
+        rom_1_size     = int("0x8000",0),
+        rom_2_size     = int("0x8000",0),
+        sp_1_size      = int("0x1000",0),
+        sp_2_size      = int("0x0",0),
     )
 
+    soc.crg.clock_domains.cd_d8m = ClockDomain()
+    soc.crg.clock_domains.cd_vga = ClockDomain()
+    soc.crg.clock_domains.cd_sdram = ClockDomain()
+    soc.crg.clock_domains.cd_sdram_ps = ClockDomain()
+
+    soc.crg.pll.create_clkout(soc.crg.cd_sdram, sys_clk_freq*2)
+    soc.crg.pll.create_clkout(soc.crg.cd_sdram_ps, sys_clk_freq*2, phase=-108)
+    soc.crg.pll.create_clkout(soc.crg.cd_vga,  sys_clk_freq/2)
+    soc.crg.pll.create_clkout(soc.crg.cd_d8m,  20e6)
+
+    soc.submodules.camera = Camera_D8M(platform)
+    soc.add_csr("camera")
+
+    # infer the logic block with memory
+    memdepth = 28*28
+    data_width = 32
+    length = memdepth * data_width//8
+    soc.submodules.logicmem = MemLogic(soc,soc.bus1.data_width,int("0x1000",0),soc.bus1.bursting)
+
+    # Writing in the scratch-pad mem
+    addr = Signal(max=length)
+    write_data = Signal(data_width)
+    logic_counter = Signal(max=3)
+
+    soc.sync.vga += [
+        If(soc.camera.read_request==1,
+            write_data.eq(Cat(soc.camera.r_auto,write_data[0:24])),
+            If(logic_counter == 3,
+                soc.logicmem.logic_write_data.eq(write_data),
+                soc.logicmem.local_adr.eq(addr),
+                addr.eq(addr+1),
+                logic_counter.eq(0),
+            ).Else(
+                logic_counter.eq(logic_counter+1),
+            )     
+            
+        ),
+
+        If(soc.camera.framedone_vga==1,
+            addr.eq(0),
+            logic_counter.eq(0)
+        )
+    ]
+
+       
     builder = Builder(soc, **builder_argdict(args))
     builder.build(run=args.build)
     soc.do_exit(builder)

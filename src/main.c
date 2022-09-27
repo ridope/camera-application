@@ -1,5 +1,9 @@
 #include "main.h"
 
+
+uint32_t get_avg(uint8_t *img, uint16_t img_width, uint16_t imb_height);
+void get_next_expo(uint32_t *expo, uint32_t avg);
+
 /*-----------------------------------------------------------------------*/
 /* Uart                                                                  */
 /*-----------------------------------------------------------------------*/
@@ -108,7 +112,7 @@ static void set_exposure(uint32_t expo){
 uint32_t get_avg(uint8_t *img, uint16_t img_width, uint16_t imb_height)
 {
 	uint32_t sum = 0;
-	uint32_t max = 0;
+
 	int i;
 
 	for(i = 0; i < img_width*imb_height; i++)
@@ -187,27 +191,6 @@ static void get_img(uint32_t *expo){
 	
 }
 
-static void init_cam(){
-	D5M_CONTROL_TypeDef camera;
-
-	/* No test pattern */
-	camera_test_pattern_write(0);
-
-	/* VGA output size: 32x32 pixels */
-	camera_vga_w_write(32);
-	camera_vga_h_write(32);
-	
-	/* Camera output size: 32x32 pixels */
-	uint64_t *reg = (uint64_t *) &camera;
-	*reg = camera_control_read();
-
-	// Necessary values to produce a 32x32 image without borders.
-	camera.row_size = 34;
-	camera.col_size = 38; 
-
-	camera_control_write(*reg);
-}
-
 /*-----------------------------------------------------------------------*/
 /* Commands                                                              */
 /*-----------------------------------------------------------------------*/
@@ -215,6 +198,26 @@ static void init_cam(){
 static void reboot_cmd(void)
 {
 	ctrl_reset_write(1);
+}
+
+/*-----------------------------------------------------------------------*/
+/* Console service / Main                                                */
+/*-----------------------------------------------------------------------*/
+
+static void console_service(void)
+{
+    char *str;
+    char *token;
+
+    str = readstr();
+    if(str == NULL) return;
+    token = get_token(&str);
+    if(strcmp(token, "help") == 0)
+        help();
+    else if(strcmp(token, "reboot") == 0)
+        reboot_cmd();
+
+    prompt();
 }
 
 /*-----------------------------------------------------------------------*/
